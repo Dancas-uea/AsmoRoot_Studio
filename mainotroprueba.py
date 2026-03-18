@@ -13,7 +13,9 @@ from PIL import Image
 from PyQt6.QtWidgets import (QApplication,QDialog, QMainWindow,QTextEdit, QWidget, QVBoxLayout, QHBoxLayout,
                              QLabel, QPushButton, QLineEdit, QComboBox, QFrame,
                              QTreeWidget, QTreeWidgetItem, QMessageBox, QInputDialog,
-                             QScrollArea, QSpacerItem, QSizePolicy, QMenu) # <--- AGREGA ESTO AQUÍ
+                             QScrollArea, QSpacerItem,QFileDialog, QSizePolicy, QMenu) # <--- AGREGA ESTO AQUÍ
+from PyQt6.QtWebEngineCore import (QWebEngineProfile, QWebEnginePage,
+                                   QWebEngineDownloadRequest)
 
 from PyQt6.QtCore import Qt, QUrl, QSize
 from PyQt6.QtGui import QIcon, QPixmap, QFont
@@ -45,6 +47,21 @@ def generar_icono_profesional():
 generar_icono_profesional()
 
 ARCHIVO_CONFIG = os.path.join(PATH_RAIZ, "config_carrera.json")
+
+class MiPaginaWeb(QWebEnginePage):
+    def createWindow(self, _type):
+        # Guardamos la URL actual antes de que cambie
+        self._url_anterior = self.url()
+        # Conectamos una sola vez para volver cuando termine
+        self.loadFinished.connect(self._volver_url_anterior)
+        return self
+
+    def _volver_url_anterior(self, ok):
+        # Desconectamos para no repetir en cada carga
+        self.loadFinished.disconnect(self._volver_url_anterior)
+        # Volvemos a la página donde estábamos
+        if hasattr(self, '_url_anterior'):
+            self.setUrl(self._url_anterior)
 
 class AsmoRootApp(QMainWindow):
     def __init__(self):
@@ -332,7 +349,7 @@ class AsmoRootApp(QMainWindow):
         browser_vbox.addLayout(header_moodle)
 
         # Configuración del Perfil Persistente y Motor del Navegador
-        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage
+        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineDownloadRequest
 
         self.perfil_persistente = QWebEngineProfile("Storage_AsmoRoot", self)
         ruta_datos = os.path.join(PATH_RAIZ, "Navegador_Datos")
@@ -345,9 +362,14 @@ class AsmoRootApp(QMainWindow):
             QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies)
         self.perfil_persistente.setHttpAcceptLanguage("es-ES,es;q=0.9")
 
-        self.web_page = QWebEnginePage(self.perfil_persistente, self)
+        self.web_page = MiPaginaWeb(self.perfil_persistente, self)
         self.browser = QWebEngineView()
         self.browser.setPage(self.web_page)
+        self.browser.settings().setAttribute(
+            self.browser.settings().WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        self.browser.settings().setAttribute(
+            self.browser.settings().WebAttribute.LocalStorageEnabled, True)
+        self.perfil_persistente.downloadRequested.connect(self.gestionar_descarga)
         self.browser.setUrl(QUrl("https://eva.pregrado.uea.edu.ec/eva2526/web/my/courses.php?lang=es"))
 
         browser_vbox.addWidget(self.browser)
@@ -674,7 +696,21 @@ class AsmoRootApp(QMainWindow):
 
             drag.exec(Qt.DropAction.CopyAction)
 
+    def gestionar_descarga(self, download):
+        # Carpeta de Descargas del usuario automáticamente
+        carpeta_descargas = os.path.join(os.path.expanduser("~"), "Downloads")
+        nombre_archivo = download.suggestedFileName()
 
+        download.setDownloadDirectory(carpeta_descargas)
+        download.setDownloadFileName(nombre_archivo)
+        download.accept()
+
+        self.status_bar_label.setText(f" ✅ Descargado en Descargas: {nombre_archivo}")
+
+    def createWindow(self, window_type):
+        # Cuando Moodle intenta abrir en nueva pestaña, lo redirigimos
+        # al mismo navegador para que active downloadRequested
+        return self.browser.page()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
