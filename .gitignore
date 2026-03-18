@@ -1,0 +1,11 @@
+# Carpetas de compilación (Basura)
+build/
+dist/
+*.spec
+__pycache__/
+
+# Configuración de PyCharm
+.idea/
+
+# Entorno virtual
+.venv/
