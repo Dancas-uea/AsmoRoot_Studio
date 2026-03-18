@@ -22,7 +22,7 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QMimeData
 from PyQt6.QtGui import QDrag
 
-
+#esta es solo una prueba
 # --- CONFIGURACIÓN ESTRUCTURAL ---
 PATH_RAIZ = r"C:\Users\AsmoRoot\Desktop\Universidad Estatal Amazonica"
 PATH_LOGO = os.path.join(PATH_RAIZ, "Logo", "logo.png")
