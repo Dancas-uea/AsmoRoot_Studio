@@ -383,7 +383,7 @@ class AsmoRootApp(QMainWindow):
     # --- LÓGICA ---
     def obtener_semestres_raiz(self):
         if not os.path.exists(PATH_RAIZ): return []
-        return [f for f in os.listdir(PATH_RAIZ) if os.path.isdir(os.path.join(PATH_RAIZ, f)) and f != "Logo"]
+        return [f for f in os.listdir(PATH_RAIZ) if os.path.isdir(os.path.join(PATH_RAIZ, f)) and f not in ["Logo", "Navegador_Datos"]]
 
     def crear_nuevo_semestre(self):
         semestre, ok1 = QInputDialog.getText(self, "Nuevo Semestre", "Nombre del Semestre:")
@@ -473,6 +473,25 @@ class AsmoRootApp(QMainWindow):
             if sem_node.childCount() > 0:
                 self.tree.addTopLevelItem(sem_node)
 
+        # --- NODO ESPECIAL: CARPETA DE DESCARGAS ---
+        carpeta_descargas = os.path.join(os.path.expanduser("~"), "Downloads")
+        nodo_descargas = QTreeWidgetItem(["⬇️ Descargas"])
+
+        archivos_dl = [f for f in os.listdir(carpeta_descargas)
+                       if f.endswith((".docx", ".pdf"))]
+        archivos_dl_ordenados = sorted(
+            archivos_dl,
+            key=lambda x: os.path.getmtime(os.path.join(carpeta_descargas, x)),
+            reverse=True
+        )
+
+        for arc in archivos_dl_ordenados:
+            if query in arc.lower() or query == "":
+                icon = "📝" if arc.endswith(".docx") else "📕"
+                nodo_descargas.addChild(QTreeWidgetItem([f"{icon} {arc}"]))
+
+        self.tree.addTopLevelItem(nodo_descargas)
+
     def seleccionar_desde_arbol(self, item):
         if item.parent() and item.parent().parent():
             nombre_arc = item.text(0).split(" ", 1)[-1]
@@ -544,9 +563,18 @@ class AsmoRootApp(QMainWindow):
 
     def abrir_archivo_desde_arbol(self, item):
         if item.childCount() == 0:
-            mat = item.parent().text(0).split(" ", 1)[-1]
-            sem = item.parent().parent().text(0).split(" ", 1)[-1]
-            os.startfile(os.path.join(PATH_RAIZ, sem, mat, item.text(0).split(" ", 1)[-1]))
+            nombre_arc = item.text(0).split(" ", 1)[-1]
+            padre = item.parent()
+
+            # Si el padre es "Descargas"
+            if padre and "Descargas" in padre.text(0):
+                carpeta_descargas = os.path.join(os.path.expanduser("~"), "Downloads")
+                os.startfile(os.path.join(carpeta_descargas, nombre_arc))
+            else:
+                # Lógica original
+                mat = padre.text(0).split(" ", 1)[-1]
+                sem = padre.parent().text(0).split(" ", 1)[-1]
+                os.startfile(os.path.join(PATH_RAIZ, sem, mat, nombre_arc))
 
     def cargar_ultima_sesion(self):
         u_sem = self.config.get("ultimo_semestre", "")
