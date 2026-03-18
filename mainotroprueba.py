@@ -49,7 +49,7 @@ ARCHIVO_CONFIG = os.path.join(PATH_RAIZ, "config_carrera.json")
 class AsmoRootApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("AsmoRoot - Academic Management System v12.0")
+        self.setWindowTitle("AsmoRoot - Academic Management System v13.7")
         self.resize(1350, 950)
 
         # Colores Identitarios
