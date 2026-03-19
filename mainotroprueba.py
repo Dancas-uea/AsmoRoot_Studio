@@ -18,6 +18,7 @@ from PyQt6.QtWebEngineCore import (QWebEngineProfile, QWebEnginePage,
                                    QWebEngineDownloadRequest)
 
 from PyQt6.QtCore import Qt, QUrl, QSize
+from PyQt6.QtCore import QPropertyAnimation, QPoint, QEasingCurve
 from PyQt6.QtGui import QIcon, QPixmap, QFont
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 
@@ -63,6 +64,74 @@ class MiPaginaWeb(QWebEnginePage):
         if hasattr(self, '_url_anterior'):
             self.setUrl(self._url_anterior)
 
+class NotificacionDescarga(QWidget):
+    def __init__(self, parent, nombre_archivo):
+        super().__init__(parent)
+        self.setFixedSize(320, 70)
+        self.setStyleSheet("""
+            background: #1C2128; 
+            border: 1px solid #30363D; 
+            border-radius: 10px;
+        """)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(10, 8, 10, 8)
+
+        icono = QLabel("📥")
+        icono.setStyleSheet("font-size: 24px; border: none;")
+        icono.setFixedWidth(35)
+
+        info = QVBoxLayout()
+        nombre = QLabel(nombre_archivo[:35] + "..." if len(nombre_archivo) > 35 else nombre_archivo)
+        nombre.setStyleSheet("color: white; font-weight: bold; font-size: 11px; border: none;")
+        estado = QLabel("✅ Descarga completada")
+        estado.setStyleSheet("color: #27AE60; font-size: 10px; border: none;")
+        info.addWidget(nombre)
+        info.addWidget(estado)
+
+        btn_cerrar = QPushButton("✕")
+        btn_cerrar.setFixedSize(20, 20)
+        btn_cerrar.setStyleSheet("background: transparent; color: #8B949E; border: none; font-size: 12px;")
+        btn_cerrar.clicked.connect(self.cerrar_animado)
+
+        layout.addWidget(icono)
+        layout.addLayout(info)
+        layout.addStretch()
+        layout.addWidget(btn_cerrar)
+
+        # Posición: abajo a la derecha
+        self._reposicionar()
+        self.show()
+        self.raise_()
+
+        # Animación de entrada (sube desde abajo)
+        self.anim_entrada = QPropertyAnimation(self, b"pos")
+        self.anim_entrada.setDuration(400)
+        self.anim_entrada.setStartValue(QPoint(self.x(), parent.height()))
+        self.anim_entrada.setEndValue(QPoint(self.x(), self.y()))
+        self.anim_entrada.setEasingCurve(QEasingCurve.Type.OutCubic)
+        self.anim_entrada.start()
+
+        # Auto-cerrar a los 5 segundos
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(5000, self.cerrar_animado)
+
+    def _reposicionar(self):
+        parent = self.parent()
+        x = parent.width() - self.width() - 20
+        y = parent.height() - self.height() - 20
+        self.move(x, y)
+
+    def cerrar_animado(self):
+        self.anim_salida = QPropertyAnimation(self, b"pos")
+        self.anim_salida.setDuration(300)
+        self.anim_salida.setStartValue(self.pos())
+        self.anim_salida.setEndValue(QPoint(self.x(), self.parent().height()))
+        self.anim_salida.setEasingCurve(QEasingCurve.Type.InCubic)
+        self.anim_salida.finished.connect(self.deleteLater)
+        self.anim_salida.start()
+
+
 class AsmoRootApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -79,7 +148,7 @@ class AsmoRootApp(QMainWindow):
 
         self.archivo_docx_sesion = ""
         self.archivo_pdf_sesion = ""
-        self.version_sistema = "v13.7"
+        self.version_sistema = "v14.5"
 
         self.cargar_config()
         self.init_ui()
@@ -336,31 +405,57 @@ class AsmoRootApp(QMainWindow):
 
         # Header del Navegador con Título y Botón de Expansión
         header_moodle = QHBoxLayout()
-        lbl_moodle = QLabel("📅 PRÓXIMAS TAREAS (MOODLE)")
-        lbl_moodle.setStyleSheet(f"color: {self.azul_pro}; font-weight: bold; border: none;")
 
-        self.btn_expandir = QPushButton("⛶")  # Icono de pantalla completa
-        self.btn_expandir.setFixedSize(35, 30)
-        self.btn_expandir.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.btn_expandir.setStyleSheet(f"""
-                    QPushButton {{
-                        background: #21262d; 
-                        color: {self.azul_pro}; 
-                        font-weight: bold;
-                        border: 1px solid {self.gris_borde}; 
-                        border-radius: 4px;
-                    }}
-                    QPushButton:hover {{
-                        background: {self.azul_pro};
-                        color: white;
-                    }}
-                """)
-        self.btn_expandir.clicked.connect(self.toggle_moodle_fullscreen)
+        # Botones navegación
+        self.btn_atras = QPushButton("⬅")
+        self.btn_adelante = QPushButton("➡")
+        self.btn_recargar = QPushButton("🔄")
 
-        header_moodle.addStretch()  # Empuja el título al centro
-        header_moodle.addWidget(lbl_moodle)
-        header_moodle.addStretch()  # Empuja el botón a la derecha
-        header_moodle.addWidget(self.btn_expandir)
+        for btn in [self.btn_atras, self.btn_adelante, self.btn_recargar]:
+            btn.setFixedSize(35, 30)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: #21262d; color: white;
+                    border: 1px solid {self.gris_borde}; border-radius: 4px;
+                }}
+                QPushButton:hover {{ background: {self.azul_pro}; }}
+            """)
+
+        self.btn_atras.clicked.connect(lambda: self.browser.back())
+        self.btn_adelante.clicked.connect(lambda: self.browser.forward())
+        self.btn_recargar.clicked.connect(lambda: self.browser.reload())
+
+        # Barra de URL
+        self.url_bar = QLineEdit()
+        self.url_bar.setPlaceholderText("Buscar o ingresar URL...")
+        self.url_bar.setStyleSheet(f"""
+            background: #0D1117; color: white;
+            border: 1px solid {self.gris_borde}; border-radius: 4px; padding: 5px;
+        """)
+        self.url_bar.setFixedHeight(30)
+        self.url_bar.returnPressed.connect(self.navegar_url)
+
+
+        # Botón descargas con contador
+        self.btn_descargas_nav = QPushButton("⬇️ 0")
+        self.btn_descargas_nav.setFixedSize(55, 30)
+        self.btn_descargas_nav.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_descargas_nav.setStyleSheet(f"""
+            QPushButton {{
+                background: #21262d; color: {self.azul_pro};
+                border: 1px solid {self.gris_borde}; border-radius: 4px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background: {self.azul_pro}; color: white; }}
+        """)
+        self.contador_descargas = 0
+        self.btn_descargas_nav.clicked.connect(self.toggle_carpeta_descargas)
+
+        header_moodle.addWidget(self.btn_atras)
+        header_moodle.addWidget(self.btn_adelante)
+        header_moodle.addWidget(self.btn_recargar)
+        header_moodle.addWidget(self.url_bar)
+        header_moodle.addWidget(self.btn_descargas_nav)
         browser_vbox.addLayout(header_moodle)
 
         # Configuración del Perfil Persistente y Motor del Navegador
@@ -380,6 +475,7 @@ class AsmoRootApp(QMainWindow):
         self.web_page = MiPaginaWeb(self.perfil_persistente, self)
         self.browser = QWebEngineView()
         self.browser.setPage(self.web_page)
+        self.browser.urlChanged.connect(lambda url: self.url_bar.setText(url.toString()))
         self.browser.settings().setAttribute(
             self.browser.settings().WebAttribute.LocalContentCanAccessRemoteUrls, True)
         self.browser.settings().setAttribute(
@@ -800,6 +896,35 @@ class AsmoRootApp(QMainWindow):
         # Cuando Moodle intenta abrir en nueva pestaña, lo redirigimos
         # al mismo navegador para que active downloadRequested
         return self.browser.page()
+
+    def navegar_url(self):
+        url = self.url_bar.text().strip()
+        if not url.startswith("http"):
+            url = "https://" + url
+        self.browser.setUrl(QUrl(url))
+
+    def toggle_carpeta_descargas(self):
+        import subprocess
+        carpeta = os.path.join(os.path.expanduser("~"), "Downloads")
+        subprocess.Popen(f'explorer "{carpeta}"')
+
+    def _descarga_completada(self, nombre_archivo):
+        # Actualizar contador en botón
+        self.contador_descargas += 1
+        self.btn_descargas_nav.setText(f"⬇️ {self.contador_descargas}")
+        self.btn_descargas_nav.setStyleSheet(f"""
+            QPushButton {{
+                background: #21262d; color: #27AE60;
+                border: 1px solid #27AE60; border-radius: 4px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background: #27AE60; color: white; }}
+        """)
+        # Notificación esquina inferior derecha
+        self.notif = NotificacionDescarga(self, nombre_archivo)
+        self.actualizar_arbol()
+        self.status_bar_label.setText(f" ✅ {nombre_archivo}")
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(4000, lambda: self.status_bar_label.setText(""))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
