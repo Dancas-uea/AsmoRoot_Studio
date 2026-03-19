@@ -6,6 +6,7 @@ from datetime import datetime
 import win32com.client
 from PIL import Image
 import os
+import psutil
 from google import genai
 
 from PIL import Image
@@ -48,6 +49,115 @@ def generar_icono_profesional():
 generar_icono_profesional()
 
 ARCHIVO_CONFIG = os.path.join(PATH_RAIZ, "config_carrera.json")
+
+# Monitorear en hilo separado para no congelar la UI
+from PyQt6.QtCore import QThread, pyqtSignal
+
+class MonitorArchivo(QThread):
+    archivo_cerrado = pyqtSignal()
+
+    def __init__(self, ruta):
+        super().__init__()
+        self.ruta = ruta
+        self.activo = True
+
+    def run(self):
+        import time
+        nombre_archivo = os.path.basename(self.ruta).lower()
+        # Esperar 3 segundos antes de empezar a monitorear
+        time.sleep(3)
+        while self.activo:
+            time.sleep(2)
+            try:
+                if self.ruta.endswith(".docx"):
+                    import win32com.client
+                    word = win32com.client.GetActiveObject("Word.Application")
+                    nombres = [doc.FullName for doc in word.Documents]
+                    if os.path.abspath(self.ruta) not in [os.path.abspath(n) for n in nombres]:
+                        self.archivo_cerrado.emit()
+                        break
+                elif self.ruta.endswith(".pdf"):
+                    nombre_archivo = os.path.splitext(os.path.basename(self.ruta))[0].lower()
+                    abierto = False
+                    for proc in psutil.process_iter(['name', 'cmdline']):
+                        try:
+                            if 'pdfgear' in proc.name().lower():
+                                cmdline_str = " ".join(proc.cmdline()).lower()
+                                if nombre_archivo in cmdline_str:
+                                    abierto = True
+                                    break
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+                    if not abierto:
+                        self.archivo_cerrado.emit()
+                        break
+            except:
+                if self.ruta.endswith(".docx"):
+                    self.archivo_cerrado.emit()
+                    break
+
+    def detener(self):
+        self.activo = False
+
+class PestanaArchivo(QWidget):
+    def __init__(self, ruta, parent_app):
+        super().__init__()
+        self.ruta = ruta
+        self.parent_app = parent_app
+        self.nombre = os.path.basename(ruta)
+        self.es_pdf = ruta.endswith(".pdf")
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(6, 4, 6, 4)
+        layout.setSpacing(5)
+
+        # Ícono
+        icono = QLabel("📕" if self.es_pdf else "📝")
+        icono.setStyleSheet("border: none; font-size: 13px;")
+        icono.setFixedWidth(18)
+
+        # Info
+        info = QVBoxLayout()
+        info.setSpacing(0)
+        nombre_label = QLabel(self.nombre[:25] + "..." if len(self.nombre) > 25 else self.nombre)
+        nombre_label.setStyleSheet("color: white; font-size: 10px; font-weight: bold; border: none;")
+        tipo_label = QLabel("PDF · abierto" if self.es_pdf else "Word · abierto")
+        tipo_label.setStyleSheet("color: #E1AD01; font-size: 9px; border: none;")
+        info.addWidget(nombre_label)
+        info.addWidget(tipo_label)
+
+        # Botón reabrir
+        btn_reabrir = QPushButton("▶")
+        btn_reabrir.setFixedSize(20, 20)
+        btn_reabrir.setStyleSheet("background: transparent; color: #00A3FF; border: none; font-size: 12px;")
+        btn_reabrir.clicked.connect(self.reabrir)
+
+        # Botón cerrar
+        btn_cerrar = QPushButton("✕")
+        btn_cerrar.setFixedSize(16, 16)
+        btn_cerrar.setStyleSheet("background: transparent; color: #555; border: none; font-size: 10px;")
+        btn_cerrar.clicked.connect(self.cerrar)
+
+        layout.addWidget(icono)
+        layout.addLayout(info)
+        layout.addStretch()
+        layout.addWidget(btn_reabrir)
+        layout.addWidget(btn_cerrar)
+
+        self.setStyleSheet("""
+            PestanaArchivo {
+                background: #161B22;
+                border: 0.5px solid #E1AD01;
+                border-radius: 5px;
+            }
+        """)
+        self.setFixedHeight(40)
+
+    def reabrir(self):
+        os.startfile(self.ruta)
+
+    def cerrar(self):
+        self.parent_app.cerrar_pestana_archivo(self)
 
 class PestañaNavegador(QWidget):
     def __init__(self, perfil, parent=None, url="https://www.google.com"):
@@ -490,8 +600,37 @@ class AsmoRootApp(QMainWindow):
         self.scroll_tree.setWidget(self.tree)
         sidebar_layout.addWidget(self.scroll_tree)
 
-        # ESPACIADOR PARA EMPUJAR EL BOTÓN ABAJO
+        self.zona_archivos_label = QLabel("ARCHIVOS ABIERTOS")
+        self.zona_archivos_label.setStyleSheet(
+            "color: #8B949E; font-size: 9px; letter-spacing: 1px; padding: 4px 0px 2px 0px; border: none;")
+        self.zona_archivos_label.hide()
 
+        # Widget interno con layout
+        self.zona_archivos_widget = QWidget()
+        self.zona_archivos_widget.setStyleSheet("background: transparent;")
+        self.zona_archivos = QVBoxLayout(self.zona_archivos_widget)
+        self.zona_archivos.setSpacing(4)
+        self.zona_archivos.setContentsMargins(0, 0, 0, 4)
+
+        # ScrollArea que lo contiene
+        self.zona_archivos_scroll = QScrollArea()
+        self.zona_archivos_scroll.setWidget(self.zona_archivos_widget)
+        self.zona_archivos_scroll.setWidgetResizable(True)
+        self.zona_archivos_scroll.setMaximumHeight(160)  # Máximo 4 pestañas visibles
+        self.zona_archivos_scroll.setStyleSheet("""
+            QScrollArea { background: transparent; border: none; }
+            QScrollBar:vertical {
+                background: #0D1117; width: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background: #30363D; border-radius: 3px;
+            }
+            QScrollBar::add-line, QScrollBar::sub-line { border: none; background: none; }
+        """)
+        self.zona_archivos_scroll.hide()
+
+        sidebar_layout.addWidget(self.zona_archivos_label)
+        sidebar_layout.addWidget(self.zona_archivos_scroll)
 
         # Nuevo Semestre
         self.btn_new_sem = QPushButton("+ NUEVO SEMESTRE")
@@ -750,7 +889,7 @@ class AsmoRootApp(QMainWindow):
     # --- LÓGICA ---
     def obtener_semestres_raiz(self):
         if not os.path.exists(PATH_RAIZ): return []
-        return [f for f in os.listdir(PATH_RAIZ) if os.path.isdir(os.path.join(PATH_RAIZ, f)) and f not in ["Logo", "Navegador_Datos"]]
+        return [f for f in os.listdir(PATH_RAIZ) if os.path.isdir(os.path.join(PATH_RAIZ, f)) and f not in ["Logo", "Navegador_Datos", "Google_Datos"]]
 
     def crear_nuevo_semestre(self):
         semestre, ok1 = QInputDialog.getText(self, "Nuevo Semestre", "Nombre del Semestre:")
@@ -1293,6 +1432,93 @@ class AsmoRootApp(QMainWindow):
             # Si no es URL, buscar en Google
             url = f"https://www.google.com/search?q={url.replace(' ', '+')}"
         self.browser_actual().setUrl(QUrl(url))
+
+    def abrir_archivo_desde_arbol(self, item):
+        if item.childCount() == 0:
+            nombre_arc = item.text(0).split(" ", 1)[-1]
+            padre = item.parent()
+
+            if padre and "Descargas" in padre.text(0):
+                carpeta = os.path.join(os.path.expanduser("~"), "Downloads")
+                ruta = os.path.join(carpeta, nombre_arc)
+            else:
+                mat = padre.text(0).split(" ", 1)[-1]
+                sem = padre.parent().text(0).split(" ", 1)[-1]
+                ruta = os.path.join(PATH_RAIZ, sem, mat, nombre_arc)
+
+            if os.path.exists(ruta):
+                # Abrir el editor directamente
+                os.startfile(ruta)
+                self.status_bar_label.setText(f" 📂 Abriendo: {nombre_arc}")
+                from PyQt6.QtCore import QTimer
+                QTimer.singleShot(4000, lambda: self.status_bar_label.setText(""))
+
+                # Agregar pestaña si no existe ya
+                self._agregar_pestana_archivo(ruta)
+
+    def _agregar_pestana_archivo(self, ruta):
+        # Evitar duplicados
+        for i in range(self.zona_archivos.count()):
+            w = self.zona_archivos.itemAt(i).widget()
+            if w and isinstance(w, PestanaArchivo) and w.ruta == ruta:
+                return
+
+        pestana = PestanaArchivo(ruta, self)
+        self.zona_archivos.addWidget(pestana)
+        self.zona_archivos_label.show()
+        self.zona_archivos_scroll.show()
+
+        # Monitorear si Word/PDF se cierra
+        from PyQt6.QtCore import QTimer
+        timer = QTimer(self)
+        timer.setInterval(2000)  # Revisar cada 2 segundos
+
+        def verificar_si_cerrado():
+            try:
+                if ruta.endswith(".docx"):
+                    import win32com.client
+                    word = win32com.client.GetActiveObject("Word.Application")
+                    nombres = [doc.FullName for doc in word.Documents]
+                    if os.path.abspath(ruta) not in [os.path.abspath(n) for n in nombres]:
+                        timer.stop()
+                        self.cerrar_pestana_archivo(pestana)
+                elif ruta.endswith(".pdf"):
+                    # Buscar si algún proceso tiene el PDF abierto
+                    nombre_archivo = os.path.basename(ruta).lower()
+                    abierto = False
+                    for proc in psutil.process_iter(['name', 'open_files']):
+                        try:
+                            archivos = proc.open_files()
+                            for f in archivos:
+                                if nombre_archivo in f.path.lower():
+                                    abierto = True
+                                    break
+                        except (psutil.NoSuchProcess, psutil.AccessDenied):
+                            continue
+                        if abierto:
+                            break
+                    if not abierto:
+                        timer.stop()
+                        self.cerrar_pestana_archivo(pestana)
+            except:
+                if ruta.endswith(".docx"):
+                    timer.stop()
+                    self.cerrar_pestana_archivo(pestana)
+
+        # Reemplaza todo el bloque del timer por esto:
+        monitor = MonitorArchivo(ruta)
+        monitor.archivo_cerrado.connect(lambda: self.cerrar_pestana_archivo(pestana))
+        monitor.start()
+        pestana.monitor = monitor  # Guardar referencia
+
+    def cerrar_pestana_archivo(self, pestana):
+        if hasattr(pestana, 'monitor'):
+            pestana.monitor.detener()
+        self.zona_archivos.removeWidget(pestana)
+        pestana.deleteLater()
+        if self.zona_archivos.count() == 0:
+            self.zona_archivos_label.hide()
+            self.zona_archivos_scroll.hide()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
