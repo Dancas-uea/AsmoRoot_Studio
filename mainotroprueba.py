@@ -49,6 +49,23 @@ generar_icono_profesional()
 
 ARCHIVO_CONFIG = os.path.join(PATH_RAIZ, "config_carrera.json")
 
+class PestañaNavegador(QWidget):
+    def __init__(self, perfil, parent=None, url="https://www.google.com"):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.web_page = MiPaginaWeb(perfil, parent)
+        self.browser = QWebEngineView()
+        self.browser.setPage(self.web_page)
+        self.browser.settings().setAttribute(
+            self.browser.settings().WebAttribute.LocalContentCanAccessRemoteUrls, True)
+        self.browser.settings().setAttribute(
+            self.browser.settings().WebAttribute.LocalStorageEnabled, True)
+        self.browser.setUrl(QUrl(url))
+        layout.addWidget(self.browser)
+
+
 class MiPaginaWeb(QWebEnginePage):
     def createWindow(self, _type):
         # Guardamos la URL actual antes de que cambie
@@ -352,7 +369,7 @@ class AsmoRootApp(QMainWindow):
 
         self.archivo_docx_sesion = ""
         self.archivo_pdf_sesion = ""
-        self.version_sistema = "v14.5"
+        self.version_sistema = "v1.15.4"
 
         self.cargar_config()
         self.init_ui()
@@ -602,15 +619,45 @@ class AsmoRootApp(QMainWindow):
         #NAVEGADOR UEA LINEA 270 APROX 319
 
         # --- NAVEGADOR UEA (MOODLE) ---
+        # --- NAVEGADOR CON PESTAÑAS ---
         self.browser_frame = QFrame()
         self.browser_frame.setStyleSheet(
             f"background: {self.fondo_card}; border: 1px solid {self.gris_borde}; border-radius: 8px;")
         browser_vbox = QVBoxLayout(self.browser_frame)
+        browser_vbox.setContentsMargins(5, 5, 5, 5)
+        browser_vbox.setSpacing(4)
 
-        # Header del Navegador con Título y Botón de Expansión
-        header_moodle = QHBoxLayout()
+        # --- BARRA DE PESTAÑAS ---
+        tabs_bar = QHBoxLayout()
+        tabs_bar.setSpacing(4)
 
-        # Botones navegación
+        self.tabs_container = QHBoxLayout()
+        self.tabs_container.setSpacing(4)
+        self.tabs_container.setSizeConstraint(QHBoxLayout.SizeConstraint.SetMinimumSize)
+        self.pestanas = []  # lista de (btn_tab, PestañaNavegador)
+
+        btn_nueva = QPushButton("+")
+        btn_nueva.setFixedSize(30, 28)
+        btn_nueva.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_nueva.setStyleSheet(f"""
+            QPushButton {{
+                background: #21262d; color: white;
+                border: 1px solid {self.gris_borde}; border-radius: 4px;
+                font-size: 16px; font-weight: bold;
+            }}
+            QPushButton:hover {{ background: {self.azul_pro}; }}
+        """)
+        btn_nueva.clicked.connect(lambda: self.nueva_pestana())
+
+        tabs_bar.addLayout(self.tabs_container)
+        tabs_bar.addWidget(btn_nueva)
+        tabs_bar.addStretch()
+        browser_vbox.addLayout(tabs_bar)
+
+        # --- BARRA DE NAVEGACIÓN ---
+        nav_bar = QHBoxLayout()
+        nav_bar.setSpacing(4)
+
         self.btn_atras = QPushButton("⬅")
         self.btn_adelante = QPushButton("➡")
         self.btn_recargar = QPushButton("🔄")
@@ -626,13 +673,12 @@ class AsmoRootApp(QMainWindow):
                 QPushButton:hover {{ background: {self.azul_pro}; }}
             """)
 
-        self.btn_atras.clicked.connect(lambda: self.browser.back())
-        self.btn_adelante.clicked.connect(lambda: self.browser.forward())
-        self.btn_recargar.clicked.connect(lambda: self.browser.reload())
+        self.btn_atras.clicked.connect(lambda: self.browser_actual().back())
+        self.btn_adelante.clicked.connect(lambda: self.browser_actual().forward())
+        self.btn_recargar.clicked.connect(lambda: self.browser_actual().reload())
 
-        # Barra de URL
         self.url_bar = QLineEdit()
-        self.url_bar.setPlaceholderText("Buscar o ingresar URL...")
+        self.url_bar.setPlaceholderText("Buscar en Google o ingresar URL...")
         self.url_bar.setStyleSheet(f"""
             background: #0D1117; color: white;
             border: 1px solid {self.gris_borde}; border-radius: 4px; padding: 5px;
@@ -640,8 +686,6 @@ class AsmoRootApp(QMainWindow):
         self.url_bar.setFixedHeight(30)
         self.url_bar.returnPressed.connect(self.navegar_url)
 
-
-        # Botón descargas con contador
         self.btn_descargas_nav = QPushButton("⬇️ 0")
         self.btn_descargas_nav.setFixedSize(55, 30)
         self.btn_descargas_nav.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -655,39 +699,43 @@ class AsmoRootApp(QMainWindow):
         self.contador_descargas = 0
         self.btn_descargas_nav.clicked.connect(self.toggle_panel_descargas)
 
-        header_moodle.addWidget(self.btn_atras)
-        header_moodle.addWidget(self.btn_adelante)
-        header_moodle.addWidget(self.btn_recargar)
-        header_moodle.addWidget(self.url_bar)
-        header_moodle.addWidget(self.btn_descargas_nav)
-        browser_vbox.addLayout(header_moodle)
+        nav_bar.addWidget(self.btn_atras)
+        nav_bar.addWidget(self.btn_adelante)
+        nav_bar.addWidget(self.btn_recargar)
+        nav_bar.addWidget(self.url_bar)
+        nav_bar.addWidget(self.btn_descargas_nav)
+        browser_vbox.addLayout(nav_bar)
 
-        # Configuración del Perfil Persistente y Motor del Navegador
-        from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEnginePage, QWebEngineDownloadRequest
+        # --- STACK DE NAVEGADORES ---
+        self.stack_browsers = QVBoxLayout()
+        browser_vbox.addLayout(self.stack_browsers)
 
+        # Configurar perfil persistente
         self.perfil_persistente = QWebEngineProfile("Storage_AsmoRoot", self)
         ruta_datos = os.path.join(PATH_RAIZ, "Navegador_Datos")
         self.perfil_persistente.setPersistentStoragePath(ruta_datos)
-
-        # Fuerza al navegador a usar tu carpeta de la Universidad como base
-        self.perfil_persistente.setDownloadPath(PATH_RAIZ)
-
+        self.perfil_persistente.setDownloadPath(os.path.join(os.path.expanduser("~"), "Downloads"))
         self.perfil_persistente.setPersistentCookiesPolicy(
             QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies)
         self.perfil_persistente.setHttpAcceptLanguage("es-ES,es;q=0.9")
-
-        self.web_page = MiPaginaWeb(self.perfil_persistente, self)
-        self.browser = QWebEngineView()
-        self.browser.setPage(self.web_page)
-        self.browser.urlChanged.connect(lambda url: self.url_bar.setText(url.toString()))
-        self.browser.settings().setAttribute(
-            self.browser.settings().WebAttribute.LocalContentCanAccessRemoteUrls, True)
-        self.browser.settings().setAttribute(
-            self.browser.settings().WebAttribute.LocalStorageEnabled, True)
         self.perfil_persistente.downloadRequested.connect(self.gestionar_descarga)
-        self.browser.setUrl(QUrl("https://eva.pregrado.uea.edu.ec/eva2526/web/my/courses.php?lang=es"))
 
-        browser_vbox.addWidget(self.browser)
+        # Perfil para Google y otras páginas (guarda sesión de Google)
+        self.perfil_google = QWebEngineProfile("Storage_Google", self)
+        ruta_google = os.path.join(PATH_RAIZ, "Google_Datos")
+        self.perfil_google.setPersistentStoragePath(ruta_google)
+        self.perfil_google.setPersistentCookiesPolicy(
+            QWebEngineProfile.PersistentCookiesPolicy.AllowPersistentCookies)
+        self.perfil_google.setHttpAcceptLanguage("es-ES,es;q=0.9")
+        self.perfil_google.downloadRequested.connect(self.gestionar_descarga)
+
+        # Crear pestaña UEA por defecto
+        self.nueva_pestana(
+            url="https://eva.pregrado.uea.edu.ec/eva2526/web/my/courses.php?lang=es",
+            titulo="🎓 UEA",
+            fija=True
+        )
+
         browser_vbox.setContentsMargins(5, 5, 5, 5)
         self.browser_frame.setFixedHeight(800)
         self.content_layout.addWidget(self.browser_frame)
@@ -1141,6 +1189,110 @@ class AsmoRootApp(QMainWindow):
     def abrir_explorador_descargas(self):
         explorador = ExploradorDescargas(self)
         explorador.exec()
+
+    def browser_actual(self):
+        """Devuelve el QWebEngineView de la pestaña activa"""
+        for btn, pestana, fija in self.pestanas:
+            if btn.property("activa"):
+                return pestana.browser
+        return self.pestanas[0][1].browser
+
+    def nueva_pestana(self, url=None, titulo="Nueva pestaña", fija=False):
+        if url is None:
+            url = f"file:///{PATH_RAIZ}/nueva_pestana.html".replace("\\", "/")
+        perfil = self.perfil_persistente if "uea.edu.ec" in url else self.perfil_google
+        pestana = PestañaNavegador(perfil, self, url)
+
+        # Botón de la pestaña
+        btn_tab = QPushButton(titulo)
+        btn_tab.setFixedHeight(28)
+        btn_tab.setMinimumWidth(60)
+        btn_tab.setMaximumWidth(110)
+        btn_tab.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_tab.setStyleSheet(f"""
+            QPushButton {{
+                background: #21262d; color: #8B949E;
+                border: 1px solid {self.gris_borde}; border-radius: 4px;
+                padding: 0 8px; font-size: 11px; text-align: left;
+            }}
+        """)
+
+        # Actualizar título cuando cargue
+        pestana.browser.titleChanged.connect(lambda t, b=btn_tab, f=fija:
+                                             b.setText(("🎓 UEA" if f else t[:20]) if t else "Nueva pestaña"))
+
+        # Actualizar URL bar al cambiar URL
+        pestana.browser.urlChanged.connect(lambda url:
+                                           self.url_bar.setText(
+                                               "" if url.toString().startswith("file:///") else url.toString())
+                                           if self.browser_actual() == pestana.browser else None)
+
+        if not fija:
+            # Botón cerrar dentro de la pestaña
+            btn_cerrar_tab = QPushButton("✕")
+            btn_cerrar_tab.setFixedSize(16, 16)
+            btn_cerrar_tab.setStyleSheet("background: transparent; color: #8B949E; border: none; font-size: 10px;")
+            btn_cerrar_tab.clicked.connect(lambda: self.cerrar_pestana(btn_tab))
+
+            tab_widget = QWidget()
+            tab_layout = QHBoxLayout(tab_widget)
+            tab_layout.setContentsMargins(0, 0, 0, 0)
+            tab_layout.setSpacing(2)
+            tab_layout.addWidget(btn_tab)
+            tab_layout.addWidget(btn_cerrar_tab)
+            self.tabs_container.addWidget(tab_widget)
+        else:
+            self.tabs_container.addWidget(btn_tab)
+
+        btn_tab.clicked.connect(lambda: self.cambiar_pestana(btn_tab))
+        self.pestanas.append((btn_tab, pestana, fija))
+
+        # Agregar al stack
+        self.stack_browsers.addWidget(pestana)
+        self.cambiar_pestana(btn_tab)
+
+    def cambiar_pestana(self, btn_activo):
+        for btn, pestana, fija in self.pestanas:
+            es_activa = btn == btn_activo
+            btn.setProperty("activa", es_activa)
+            pestana.setVisible(es_activa)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: {'#0D1117' if es_activa else '#21262d'};
+                    color: {'white' if es_activa else '#8B949E'};
+                    border: {'1px solid #00A3FF' if es_activa else f'1px solid {self.gris_borde}'};
+                    border-radius: 4px; padding: 0 8px;
+                    font-size: 11px; text-align: left;
+                }}
+            """)
+            if es_activa:
+                url_str = pestana.browser.url().toString()
+                self.url_bar.setText("" if url_str.startswith("file:///") else url_str)
+
+    def cerrar_pestana(self, btn_tab):
+        if len(self.pestanas) <= 1:
+            return
+        for i, (btn, pestana, fija) in enumerate(self.pestanas):
+            if btn == btn_tab and not fija:
+                self.pestanas.pop(i)
+                # Remover widget del tab
+                for j in range(self.tabs_container.count()):
+                    w = self.tabs_container.itemAt(j).widget()
+                    if w and btn_tab in [w] + [w.findChild(QPushButton, "") or w]:
+                        self.tabs_container.takeAt(j).widget().deleteLater()
+                        break
+                pestana.deleteLater()
+                # Activar la primera pestaña
+                indice_anterior = max(0, i - 1)
+                self.cambiar_pestana(self.pestanas[indice_anterior][0])
+                break
+
+    def navegar_url(self):
+        url = self.url_bar.text().strip()
+        if not url.startswith("http"):
+            # Si no es URL, buscar en Google
+            url = f"https://www.google.com/search?q={url.replace(' ', '+')}"
+        self.browser_actual().setUrl(QUrl(url))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
