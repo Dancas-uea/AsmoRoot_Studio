@@ -79,7 +79,7 @@ class AsmoRootApp(QMainWindow):
 
         self.archivo_docx_sesion = ""
         self.archivo_pdf_sesion = ""
-        self.version_sistema = "v12.0"
+        self.version_sistema = "v13.7"
 
         self.cargar_config()
         self.init_ui()
@@ -123,6 +123,18 @@ class AsmoRootApp(QMainWindow):
             self.logo_label.setPixmap(pix)
         self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         sidebar_layout.addWidget(self.logo_label)
+
+        # AGREGA ESTO justo después del logo:
+        self.nombre_label = QLabel("AsmoRoot - Academic Management System")
+        self.nombre_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.nombre_label.setStyleSheet(
+            "color: #27AE60; font-size: 11px; border: none; margin-bottom: 5px;")
+        sidebar_layout.addWidget(self.nombre_label)
+
+        self.ver_label = QLabel(f"{self.version_sistema}")
+        self.ver_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.ver_label.setStyleSheet("color: #27AE60; font-size: 11px; border: none; margin-bottom: 5px;")
+        sidebar_layout.addWidget(self.ver_label)
 
         # Botón Actualizar
         self.btn_refresh = QPushButton("  ACTUALIZAR SISTEMA")
@@ -199,10 +211,13 @@ class AsmoRootApp(QMainWindow):
         sidebar_layout.addWidget(self.btn_new_sem)
 
         # Barra de Estado (Ubicada al final)
-        self.status_bar_label = QLabel(f" Sistema AsmoRoot Listo | Versión {self.version_sistema}")
+        bottom_bar = QHBoxLayout()
+
+        self.status_bar_label = QLabel("")
         self.status_bar_label.setStyleSheet(
-            f"color: #8B949E; font-size: 11px; padding: 5px; border-top: 1px solid {self.gris_borde};")
-        sidebar_layout.addWidget(self.status_bar_label)
+            f"color: #27AE60; font-size: 11px; padding: 5px; border-top: 1px solid {self.gris_borde};")
+        bottom_bar.addWidget(self.status_bar_label)
+        sidebar_layout.addLayout(bottom_bar)
 
         self.main_layout.addWidget(self.sidebar)
 
@@ -725,15 +740,61 @@ class AsmoRootApp(QMainWindow):
             drag.exec(Qt.DropAction.CopyAction)
 
     def gestionar_descarga(self, download):
-        # Carpeta de Descargas del usuario automáticamente
         carpeta_descargas = os.path.join(os.path.expanduser("~"), "Downloads")
         nombre_archivo = download.suggestedFileName()
+        ruta_final = os.path.join(carpeta_descargas, nombre_archivo)
+
+        # --- LÓGICA DE REEMPLAZO (como Chrome) ---
+        if os.path.exists(ruta_final):
+            respuesta = QMessageBox.question(
+                self,
+                "Archivo ya existe",
+                f'"{nombre_archivo}" ya existe en Descargas.\n¿Deseas reemplazarlo?',
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            )
+            if respuesta == QMessageBox.StandardButton.No:
+                # Generar nombre alternativo como Chrome: "archivo (1).docx"
+                base, ext = os.path.splitext(nombre_archivo)
+                contador = 1
+                while os.path.exists(os.path.join(carpeta_descargas, f"{base} ({contador}){ext}")):
+                    contador += 1
+                nombre_archivo = f"{base} ({contador}){ext}"
 
         download.setDownloadDirectory(carpeta_descargas)
         download.setDownloadFileName(nombre_archivo)
         download.accept()
 
-        self.status_bar_label.setText(f" ✅ Descargado en Descargas: {nombre_archivo}")
+        # --- MENSAJE EN BARRA DE ESTADO SIN CONGELAR ---
+        self.status_bar_label.setText(f" ⬇️ Descargando: {nombre_archivo}...")
+
+        # Cuando termine, actualizar mensaje y árbol automáticamente
+        download.isFinishedChanged.connect(lambda: self._descarga_completada(nombre_archivo))
+
+    def _descarga_completada(self, nombre_archivo):
+        self.status_bar_label.setText(f" ✅ Descargado: {nombre_archivo}")
+        self.actualizar_arbol()
+        # Desaparece a los 4 segundos
+        from PyQt6.QtCore import QTimer
+        QTimer.singleShot(4000, lambda: self.status_bar_label.setText(""))
+
+    def abrir_archivo_desde_arbol(self, item):
+        if item.childCount() == 0:
+            nombre_arc = item.text(0).split(" ", 1)[-1]
+            padre = item.parent()
+
+            if padre and "Descargas" in padre.text(0):
+                carpeta_descargas = os.path.join(os.path.expanduser("~"), "Downloads")
+                ruta = os.path.join(carpeta_descargas, nombre_arc)
+            else:
+                mat = padre.text(0).split(" ", 1)[-1]
+                sem = padre.parent().text(0).split(" ", 1)[-1]
+                ruta = os.path.join(PATH_RAIZ, sem, mat, nombre_arc)
+
+            os.startfile(ruta)
+            # Mensaje al abrir
+            self.status_bar_label.setText(f" 📂 Abriendo: {nombre_arc}")
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(4000, lambda: self.status_bar_label.setText(""))
 
     def createWindow(self, window_type):
         # Cuando Moodle intenta abrir en nueva pestaña, lo redirigimos
@@ -743,5 +804,5 @@ class AsmoRootApp(QMainWindow):
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = AsmoRootApp()
-    window.show()
+    window.showMaximized()  # ← aquí en vez de show()
     sys.exit(app.exec())
