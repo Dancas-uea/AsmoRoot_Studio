@@ -2019,10 +2019,11 @@ class AsmoRootApp(QMainWindow):
 
     # ── SNAP / RESIZE / TOGGLE ────────────────
     def _toggle_maximized(self):
-        if self.isMaximized():
+        if self.windowState() & Qt.WindowState.WindowMaximized:
+            self.setWindowState(Qt.WindowState.WindowNoState)
             self.showNormal()
         else:
-            self.showMaximized()
+            self.setWindowState(Qt.WindowState.WindowMaximized)
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
