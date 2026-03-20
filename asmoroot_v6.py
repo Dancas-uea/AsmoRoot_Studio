@@ -195,8 +195,7 @@ def input_style():
 
 
 def label_style(size=11, color_key="ts", weight="normal"):
-    return (f"color: {t(color_key)}; font-size: {size}px; font-weight: {weight}; "
-            f"font-family: 'SF Pro Display', 'Segoe UI', sans-serif; border: none;")
+    return f"color: {t(color_key)}; font-size: {size}px; font-weight: {weight}; font-family: 'SF Pro Display', 'Segoe UI', sans-serif; border: none; text-decoration: none;"
 
 
 def mac_tooltip(widget, texto):
@@ -900,10 +899,12 @@ class AsmoRootApp(QMainWindow):
         mtabs_lay = QHBoxLayout(self.mtabs_bar)
         mtabs_lay.setContentsMargins(14, 7, 14, 7)
         mtabs_lay.setSpacing(4)
-        self.btn_tab_uea   = self._make_mtab("🌐  UEA Portal", "uea")
-        self.btn_tab_panel = self._make_mtab("📚  Gestión Académica", "panel")
+        self.btn_tab_uea = self._make_mtab("🌐  UEA", "uea")
+        self.btn_tab_panel = self._make_mtab("📚  Gestión", "panel")
+        self.btn_tab_teams = self._make_mtab("💜  Teams", "teams")
         mtabs_lay.addWidget(self.btn_tab_uea)
         mtabs_lay.addWidget(self.btn_tab_panel)
+        mtabs_lay.addWidget(self.btn_tab_teams)
         mtabs_lay.addStretch()
         root_lay.addWidget(self.mtabs_bar)
 
@@ -920,6 +921,7 @@ class AsmoRootApp(QMainWindow):
 
         self._build_panel_uea()
         self._build_panel_gestion()
+        self._build_panel_teams()
 
         self.panel_descargas = PanelDescargas(self)
         self.panel_descargas.hide()
@@ -943,6 +945,28 @@ class AsmoRootApp(QMainWindow):
         btn.clicked.connect(lambda: self._switch_main(tab_id))
         return btn
 
+    def _switch_main(self, tab_id):
+        map_ = {"uea": (self.btn_tab_uea, 0), "panel": (self.btn_tab_panel, 1), "teams": (self.btn_tab_teams, 2)}
+        for k, (btn, idx) in map_.items():
+            btn.setStyleSheet(self._mtab_style(k == tab_id))
+        self.stack.setCurrentIndex(map_[tab_id][1])
+        # Sidebar: en UEA respeta el estado, en Gestión/Teams siempre visible
+        if tab_id == "uea":
+            self.sidebar.setVisible(self.sidebar_visible)
+        else:
+            self.sidebar.show()
+        if tab_id == "teams":
+            self.sb_tabs.hide()
+            self.sb_tree_frame.hide()
+            self.sb_dl_frame.hide()
+            self.btn_new_sem.hide()
+            self.sb_calendar_frame.show()
+        else:
+            self.sb_tabs.show()
+            self.sb_tree_frame.show()
+            self.btn_new_sem.show()
+            self.sb_calendar_frame.hide()
+            self._sb_mode("tree")
     def _mtab_style(self, activo):
         if activo:
             return (f"QPushButton{{background:{t('accd')};color:{t('acct')};"
@@ -954,11 +978,6 @@ class AsmoRootApp(QMainWindow):
                 f"font-size:12px;font-family:'SF Pro Display','Segoe UI',sans-serif;}}"
                 f"QPushButton:hover{{background:{t('cardh')};color:{t('tp')};}}")
 
-    def _switch_main(self, tab_id):
-        map_ = {"uea": (self.btn_tab_uea, 0), "panel": (self.btn_tab_panel, 1)}
-        for k, (btn, idx) in map_.items():
-            btn.setStyleSheet(self._mtab_style(k == tab_id))
-        self.stack.setCurrentIndex(map_[tab_id][1])
 
     # ── SIDEBAR ───────────────────────────────
     def _build_sidebar(self):
@@ -1004,10 +1023,10 @@ class AsmoRootApp(QMainWindow):
         self.sidebar_lay.addWidget(logo_frame)
 
         # Tabs árbol/descargas
-        sb_tabs = QFrame()
-        sb_tabs.setFixedHeight(34)
-        sb_tabs.setStyleSheet(f"border-bottom:1px solid {t('brd')};background:transparent;")
-        st_lay = QHBoxLayout(sb_tabs)
+        self.sb_tabs = QFrame()
+        self.sb_tabs.setFixedHeight(34)
+        self.sb_tabs.setStyleSheet(f"border-bottom:1px solid {t('brd')};background:transparent;")
+        st_lay = QHBoxLayout(self.sb_tabs)
         st_lay.setContentsMargins(0, 0, 0, 0)
         st_lay.setSpacing(0)
         self.sbt_tree = QPushButton("Árbol")
@@ -1017,7 +1036,7 @@ class AsmoRootApp(QMainWindow):
             st_lay.addWidget(b)
         self.sbt_tree.clicked.connect(lambda: self._sb_mode("tree"))
         self.sbt_dl.clicked.connect(lambda: self._sb_mode("dl"))
-        self.sidebar_lay.addWidget(sb_tabs)
+        self.sidebar_lay.addWidget(self.sb_tabs)
 
         # Árbol frame
         self.sb_tree_frame = QWidget()
@@ -1144,10 +1163,86 @@ class AsmoRootApp(QMainWindow):
             f"QPushButton:hover{{background:#4a9de0;}}")
         self.btn_new_sem.clicked.connect(self.crear_nuevo_semestre)
         self.sidebar_lay.addWidget(self.btn_new_sem)
-
+        self.sb_calendar_frame = self._build_sidebar_calendar()
+        self.sb_calendar_frame.hide()
+        self.sidebar_lay.addWidget(self.sb_calendar_frame, 1)
         self.body_lay.addWidget(self.sidebar)
         self._sb_mode("tree")
 
+    def _build_sidebar_calendar(self):
+        import calendar as cal_mod
+        frame = QWidget()
+        lay = QVBoxLayout(frame)
+        lay.setContentsMargins(10, 14, 10, 10)
+        lay.setSpacing(8)
+
+        ahora = datetime.now()
+        meses_es = {1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+                    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+                    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre"}
+
+        lbl_mes = QLabel(f"{meses_es[ahora.month]} {ahora.year}")
+        lbl_mes.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_mes.setStyleSheet(label_style(13, "tp", "600") + "text-decoration:none;background:transparent;")
+        lay.addWidget(lbl_mes)
+
+        # Días semana
+        dias_row = QHBoxLayout()
+        dias_row.setSpacing(2)
+        for d in ["Do", "Lu", "Ma", "Mi", "Ju", "Vi", "Sá"]:
+            lbl = QLabel(d)
+            lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl.setFixedWidth(28)
+            lbl.setStyleSheet(label_style(9, "tm", "600") + "text-decoration:none;background:transparent;")
+            dias_row.addWidget(lbl)
+        lay.addLayout(dias_row)
+
+        # Grid días
+        hoy = ahora.day
+        for semana in cal_mod.monthcalendar(ahora.year, ahora.month):
+            row = QHBoxLayout()
+            row.setSpacing(2)
+            for dia in semana:
+                if dia == 0:
+                    sp = QLabel("")
+                    sp.setFixedSize(28, 28)
+                    sp.setStyleSheet("background:transparent;border:none;")
+                    row.addWidget(sp)
+                else:
+                    es_hoy = (dia == hoy)
+                    es_sabado = (semana.index(dia) == 6)
+                    btn = QPushButton(str(dia))
+                    btn.setFixedSize(28, 28)
+                    if es_hoy:
+                        estilo = f"""QPushButton{{
+                            background:{t('acc')};color:white;
+                            border-radius:14px;border:none;
+                            font-size:11px;font-weight:700;
+                        }}"""
+                    elif es_sabado:
+                        estilo = f"""QPushButton{{
+                            background:rgba(124,58,237,0.25);color:#a78bfa;
+                            border-radius:14px;
+                            border:1px solid rgba(124,58,237,0.40);
+                            font-size:11px;font-weight:600;
+                        }}
+                        QPushButton:hover{{background:rgba(124,58,237,0.40);}}"""
+                    else:
+                        estilo = f"""QPushButton{{
+                            background:transparent;color:{t('ts')};
+                            border-radius:14px;border:none;font-size:11px;
+                        }}
+                        QPushButton:hover{{background:{t('cardh')};}}"""
+                    btn.setStyleSheet(estilo)
+                    row.addWidget(btn)
+            lay.addLayout(row)
+
+        lbl_nota = QLabel("💜 Sábados = clases Teams")
+        lbl_nota.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_nota.setStyleSheet(label_style(9, "tm") + "text-decoration:none;background:transparent;padding-top:6px;")
+        lay.addWidget(lbl_nota)
+        lay.addStretch()
+        return frame
     def _sbt_style(self, activo):
         if activo:
             return (f"QPushButton{{background:transparent;color:{t('acct')};"
@@ -1520,6 +1615,312 @@ class AsmoRootApp(QMainWindow):
         self.panel_gestion.setWidget(inner)
         self.stack.addWidget(self.panel_gestion)
 
+    # ── PANEL TEAMS ───────────────────────────────
+    def _build_panel_teams(self):
+        from datetime import datetime, timedelta
+        import webbrowser
+        import subprocess
+
+        # Horario fijo — todos los sábados
+        CLASES = [
+            {
+                "materia": "Estructura de Datos",
+                "hora_ini": "07:30", "hora_fin": "08:30",
+                "color": "#5C6BC0",
+                "link": "https://teams.microsoft.com/meet/26418062592046?p=PDT8uTaYlyxvQ3bFKn",
+                "icono": "🗃️",
+            },
+            {
+                "materia": "Fundamentos de Sistemas Digitales",
+                "hora_ini": "08:45", "hora_fin": "09:45",
+                "color": "#00897B",
+                "link": "https://teams.microsoft.com/meet/28313346628339?p=YO6bvOle8dFedSLlqG",
+                "icono": "💻",
+            },
+            {
+                "materia": "Administración de Sistemas Operativos",
+                "hora_ini": "10:00", "hora_fin": "11:00",
+                "color": "#1E88E5",
+                "link": "https://teams.microsoft.com/meet/26838915440902?p=HJ6RVWEAnuI9FXia8P",
+                "icono": "⚙️",
+            },
+            {
+                "materia": "Metodología de la Investigación",
+                "hora_ini": "11:15", "hora_fin": "12:15",
+                "color": "#8E24AA",
+                "link": "https://teams.microsoft.com/meet/25578489420867?p=aqhgcWCq47yeN8fxGc",
+                "icono": "🔬",
+            },
+            {
+                "materia": "Instalaciones Eléctricas y Cableado",
+                "hora_ini": "12:30", "hora_fin": "13:30",
+                "color": "#F4511E",
+                "link": "https://teams.microsoft.com/meet/27778554442830?p=KsBcM9N1d1SCoDjGtL",
+                "icono": "⚡",
+            },
+        ]
+
+        self.panel_teams = QScrollArea()
+        self.panel_teams.setWidgetResizable(True)
+        self.panel_teams = QScrollArea()
+        self.panel_teams.setWidgetResizable(True)
+        self.panel_teams = QScrollArea()
+        self.panel_teams.setWidgetResizable(True)
+        self.panel_teams.setStyleSheet("""
+            QScrollArea { border: none; background: transparent; }
+            QLabel { text-decoration: none; border: none; }
+            QFrame { text-decoration: none; }
+        """)
+
+        inner = QWidget()
+        inner.setStyleSheet("""
+            QWidget { background: transparent; text-decoration: none; }
+            QLabel { text-decoration: none; border: none; }
+        """)
+        lay = QVBoxLayout(inner)
+        lay.setContentsMargins(28, 28, 28, 28)
+        lay.setSpacing(18)
+
+        # ─ Header ─
+        hdr = QHBoxLayout()
+
+        logo_teams = QLabel("💜")
+        logo_teams.setFixedSize(48, 48)
+        logo_teams.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        logo_teams.setStyleSheet(f"""
+            background: rgba(124,58,237,0.18);
+            border: 1px solid rgba(124,58,237,0.35);
+            border-radius: 12px;
+            font-size: 22px;
+        """)
+
+        info = QVBoxLayout()
+        info.setSpacing(2)
+        lbl_titulo = QLabel("Microsoft Teams")
+        lbl_titulo.setStyleSheet(label_style(18, "tp", "700"))
+        lbl_sub = QLabel("Universidad Estatal Amazónica · Clases virtuales")
+        lbl_sub.setStyleSheet(label_style(11, "tm"))
+        info.addWidget(lbl_titulo)
+        info.addWidget(lbl_sub)
+
+        btn_abrir_teams = QPushButton("▶  Abrir Teams")
+        btn_abrir_teams.setFixedHeight(36)
+        btn_abrir_teams.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(124,58,237,0.22);
+                color: #a78bfa;
+                border: 1px solid rgba(124,58,237,0.40);
+                border-radius: 9px;
+                padding: 0 16px;
+                font-size: 12px;
+                font-weight: 600;
+                font-family: Inter, -apple-system, sans-serif;
+            }}
+            QPushButton:hover {{ background: rgba(124,58,237,0.35); }}
+        """)
+        btn_abrir_teams.clicked.connect(lambda: os.startfile("msteams:"))
+
+        hdr.addWidget(logo_teams)
+        hdr.addSpacing(12)
+        hdr.addLayout(info)
+        hdr.addStretch()
+        hdr.addWidget(btn_abrir_teams)
+        lay.addLayout(hdr)
+
+        # ─ Accesos rápidos ─
+        lbl_rapidos = QLabel("ACCESOS RÁPIDOS")
+        lbl_rapidos.setStyleSheet(label_style(9, "tm") + "letter-spacing:1.2px;")
+        lay.addWidget(lbl_rapidos)
+
+        rapidos_row = QHBoxLayout()
+        rapidos_row.setSpacing(10)
+
+        accesos = [
+            ("📅", "Calendario", "msteams://teams.microsoft.com/l/calendar"),
+            ("🔔", "Notificaciones", "msteams://teams.microsoft.com/l/activity"),
+            ("💬", "Chat", "msteams://teams.microsoft.com/l/chat"),
+            ("📋", "Tareas", "msteams://teams.microsoft.com/l/entity/com.microsoft.teamspace.tab.planner"),
+        ]
+
+        for icono, nombre, url in accesos:
+            btn = QFrame()
+            btn.setFixedHeight(80)
+            btn.setStyleSheet(f"""
+                QFrame {{
+                    background: {t('card')};
+                    border: 1px solid {t('brd')};
+                    border-radius: 12px;
+                }}
+                QFrame:hover {{
+                    background: {t('cardh')};
+                    border-color: rgba(124,58,237,0.40);
+                }}
+            """)
+            btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            btn_lay = QVBoxLayout(btn)
+            btn_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            btn_lay.setSpacing(5)
+
+            ic = QLabel(icono)
+            ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            ic.setStyleSheet("font-size:22px;border:none;background:transparent;")
+
+            nm = QLabel(nombre)
+            nm.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            nm.setStyleSheet(label_style(11, "ts", "500") + "text-decoration:none;background:transparent;")
+
+            btn_lay.addWidget(ic)
+            btn_lay.addWidget(nm)
+
+            btn.mousePressEvent = lambda e, u=url: os.startfile(u)
+            rapidos_row.addWidget(btn)
+
+        lay.addLayout(rapidos_row)
+
+        # ─ Próxima clase ─
+        lbl_proxima = QLabel("PRÓXIMA CLASE")
+        lbl_proxima.setStyleSheet(label_style(9, "tm") + "letter-spacing:1.2px;")
+        lay.addWidget(lbl_proxima)
+
+        # Calcular próxima clase
+        ahora = datetime.now()
+        proxima = None
+        dias_hasta_sabado = (5 - ahora.weekday()) % 7
+
+        for clase in CLASES:
+            hora, minuto = map(int, clase["hora_ini"].split(":"))
+            fecha_clase = ahora.replace(
+                hour=hora, minute=minuto, second=0, microsecond=0
+            ) + timedelta(days=dias_hasta_sabado)
+
+            # Si hoy es sábado y la clase ya pasó, buscar próximo sábado
+            if ahora.weekday() == 5 and fecha_clase < ahora:
+                fecha_clase += timedelta(days=7)
+
+            if proxima is None or fecha_clase < proxima[1]:
+                proxima = (clase, fecha_clase)
+
+        if proxima:
+            clase_prox, fecha_prox = proxima
+            card_prox = QFrame()
+            card_prox.setStyleSheet(f"""
+                QFrame {{
+                    background: rgba(124,58,237,0.10);
+                    border: 1px solid rgba(124,58,237,0.28);
+                    border-left: 3px solid {clase_prox['color']};
+                    border-radius: 12px;
+                }}
+            """)
+            cp_lay = QHBoxLayout(card_prox)
+            cp_lay.setContentsMargins(16, 14, 16, 14)
+            cp_lay.setSpacing(12)
+
+            ic_prox = QLabel(clase_prox["icono"])
+            ic_prox.setStyleSheet("font-size:24px;border:none;background:transparent;")
+            ic_prox.setFixedWidth(32)
+
+            info_prox = QVBoxLayout()
+            info_prox.setSpacing(3)
+            lbl_mat = QLabel(clase_prox["materia"])
+            lbl_mat.setStyleSheet(label_style(13, "tp", "600") + "text-decoration:none;background:transparent;")
+            es_hoy = fecha_prox.date() == ahora.date()
+            dias_es = {"Monday": "Lunes", "Tuesday": "Martes", "Wednesday": "Miércoles",
+                       "Thursday": "Jueves", "Friday": "Viernes", "Saturday": "Sábado", "Sunday": "Domingo"}
+            dia_en = fecha_prox.strftime("%A")
+            dia_txt = "Hoy" if es_hoy else f"{dias_es[dia_en]} {fecha_prox.strftime('%d/%m')}"
+            lbl_hora = QLabel(f"{dia_txt}  ·  {clase_prox['hora_ini']} — {clase_prox['hora_fin']}")
+            lbl_hora.setStyleSheet(label_style(10, "tm") + "text-decoration:none;background:transparent;")
+            info_prox.addWidget(lbl_mat)
+            info_prox.addWidget(lbl_hora)
+
+            btn_unirse = QPushButton("  Unirse")
+            btn_unirse.setFixedHeight(34)
+            btn_unirse.setFixedWidth(100)
+            btn_unirse.setStyleSheet(f"""
+                QPushButton {{
+                    background: rgba(124,58,237,0.25);
+                    color: #a78bfa;
+                    border: 1px solid rgba(124,58,237,0.45);
+                    border-radius: 8px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    font-family: Inter, -apple-system, sans-serif;
+                }}
+                QPushButton:hover {{ background: rgba(124,58,237,0.40); }}
+            """)
+            btn_unirse.clicked.connect(
+                lambda _, url=clase_prox["link"]: os.startfile(url))
+
+            cp_lay.addWidget(ic_prox)
+            cp_lay.addLayout(info_prox)
+            cp_lay.addStretch()
+            cp_lay.addWidget(btn_unirse)
+            lay.addWidget(card_prox)
+
+        # ─ Todas las clases ─
+        lbl_todas = QLabel("HORARIO COMPLETO — SÁBADOS")
+        lbl_todas.setStyleSheet(label_style(9, "tm") + "letter-spacing:1.2px;")
+        lay.addWidget(lbl_todas)
+
+        for clase in CLASES:
+            card = QFrame()
+            card.setFixedHeight(62)
+            card.setStyleSheet(f"""
+                QFrame {{
+                    background: {t('card')};
+                    border: 1px solid {t('brd')};
+                    border-left: 3px solid {clase['color']};
+                    border-radius: 10px;
+                }}
+                QFrame:hover {{ background: {t('cardh')}; }}
+            """)
+            cl = QHBoxLayout(card)
+            cl.setContentsMargins(14, 0, 14, 0)
+            cl.setSpacing(12)
+
+            ic = QLabel(clase["icono"])
+            ic.setFixedWidth(28)
+            ic.setStyleSheet("font-size:18px;border:none;background:transparent;")
+
+            info_cl = QVBoxLayout()
+            info_cl.setSpacing(2)
+            lbl_n = QLabel(clase["materia"])
+            lbl_n.setStyleSheet(label_style(11, "tp", "500") + "text-decoration:none;background:transparent;")
+            lbl_h = QLabel(f"{clase['hora_ini']} — {clase['hora_fin']}")
+            lbl_h.setStyleSheet(label_style(10, "tm") + "text-decoration:none;background:transparent;")
+            info_cl.addWidget(lbl_n)
+            info_cl.addWidget(lbl_h)
+
+            btn_join = QPushButton("Unirse →")
+            btn_join.setFixedHeight(28)
+            btn_join.setFixedWidth(80)
+            btn_join.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: #a78bfa;
+                    border: 1px solid rgba(124,58,237,0.35);
+                    border-radius: 7px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    font-family: Inter, -apple-system, sans-serif;
+                }}
+                QPushButton:hover {{
+                    background: rgba(124,58,237,0.20);
+                }}
+            """)
+            btn_join.clicked.connect(
+                lambda _, url=clase["link"]: os.startfile(url))
+
+            cl.addWidget(ic)
+            cl.addLayout(info_cl)
+            cl.addStretch()
+            cl.addWidget(btn_join)
+            lay.addWidget(card)
+
+        lay.addStretch()
+        self.panel_teams.setWidget(inner)
+        self.stack.addWidget(self.panel_teams)  # index 2
+
     # ── STATUS BAR ────────────────────────────
     def _build_statusbar(self):
         self.statusbar_frame = QFrame()
@@ -1589,6 +1990,9 @@ class AsmoRootApp(QMainWindow):
 
     # ── SIDEBAR TOGGLE ────────────────────────
     def toggle_sidebar(self):
+        # Solo funciona en panel UEA
+        if self.stack.currentIndex() != 0:
+            return
         self.sidebar_visible = not self.sidebar_visible
         self.sidebar.setVisible(self.sidebar_visible)
 
