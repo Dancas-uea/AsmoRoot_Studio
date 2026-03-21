@@ -80,10 +80,14 @@ def aplicar_mica(hwnd):
         print(f"Mica no disponible: {e}")
 
 
-# ─────────────────────────────────────────────
-#  CONFIGURACIÓN
-# ─────────────────────────────────────────────
-# Leer PATH_RAIZ desde config global del usuario
+# ── Ruta base relativa al .exe (funciona para todos los usuarios) ──
+if getattr(sys, 'frozen', False):
+    # Corriendo como .exe compilado con PyInstaller
+    _BASE_DIR = os.path.dirname(sys.executable)
+else:
+    # Corriendo como script .py en desarrollo
+    _BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 _ASMO_CFG_PATH = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
 if os.path.exists(_ASMO_CFG_PATH):
     with open(_ASMO_CFG_PATH, 'r', encoding='utf-8') as _f:
@@ -92,9 +96,18 @@ if os.path.exists(_ASMO_CFG_PATH):
 else:
     PATH_RAIZ = os.path.join(os.path.expanduser("~"), "AsmoRoot")
 
-PATH_LOGO      = os.path.join(PATH_RAIZ, "Logo", "logo.png")
-PATH_ICO       = os.path.join(PATH_RAIZ, "Logo", "logo.ico")
-ARCHIVO_CONFIG = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
+# Logo busca primero junto al .exe, luego en la carpeta del proyecto
+PATH_LOGO = (
+    os.path.join(_BASE_DIR, "assets", "logo.png")
+    if os.path.exists(os.path.join(_BASE_DIR, "assets", "logo.png"))
+    else os.path.join(_BASE_DIR, "logo.png")
+)
+PATH_ICO = (
+    os.path.join(_BASE_DIR, "assets", "logo.ico")
+    if os.path.exists(os.path.join(_BASE_DIR, "assets", "logo.ico"))
+    else os.path.join(_BASE_DIR, "logo.ico")
+)
+ARCHIVO_CONFIG = _ASMO_CFG_PATH
 
 
 def generar_icono_profesional():
@@ -749,7 +762,7 @@ class AreaNotificaciones(QWidget):
 #  TITLEBAR macOS
 # ─────────────────────────────────────────────
 class TitleBar(QFrame):
-    def __init__(self, parent, titulo="AsmoRoot v7"):
+    def __init__(self, parent, titulo="AsmoRoot Academic Management System"):
         super().__init__(parent)
         self.parent_win = parent
         self.setFixedHeight(44)
@@ -2546,17 +2559,29 @@ class AsmoRootApp(QMainWindow):
         self.stack.addWidget(self.panel_config)  # index 3
 
     def _reconstruir_panel_teams(self):
-        """Bug 2 fix: reconstruye el panel Teams en vivo al guardar desde Config."""
-        # Buscar el widget actual en el stack (index 2)
+        """Reconstruye el panel Teams en vivo sin reiniciar la app."""
+        # Guardar el índice actual para restaurarlo después
+        idx_actual = self.stack.currentIndex()
+
+        # Quitar y destruir el panel viejo (siempre está en index 2)
         old_widget = self.stack.widget(2)
         if old_widget:
             self.stack.removeWidget(old_widget)
             old_widget.deleteLater()
+
+        # Reconstruir — _build_panel_teams hace addWidget al final del stack
         self._build_panel_teams()
-        # Mover el nuevo widget al index 2 si quedó al final
-        new_idx = self.stack.indexOf(self.panel_teams)
-        if new_idx != 2:
-            self.stack.insertWidget(2, self.stack.widget(new_idx))
+
+        # Moverlo de vuelta a la posición 2
+        last_idx = self.stack.count() - 1
+        new_widget = self.stack.widget(last_idx)
+        self.stack.removeWidget(new_widget)
+        self.stack.insertWidget(2, new_widget)
+
+        # Restaurar vista si el usuario estaba viendo Teams
+        if idx_actual == 2:
+            self.stack.setCurrentIndex(2)
+
         self.notificar("gn", "Teams actualizado", "Panel recargado en vivo")
 
     def _abrir_link_seguro(self, url):
@@ -2576,46 +2601,104 @@ class AsmoRootApp(QMainWindow):
 
     # ── IMPORTAR EXCEL TEAMS ─────────────────────
     def _importar_excel_teams(self):
-        from PyQt6.QtWidgets import QFileDialog, QMessageBox
         import json
         CONFIG_PATH = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
+
+        MSGBOX_STYLE = f"""
+            QMessageBox {{
+                background: {t('sb')};
+                color: {t('tp')};
+                font-family: 'SF Pro Display', 'Segoe UI', sans-serif;
+                font-size: 12px;
+            }}
+            QMessageBox QLabel {{
+                color: {t('tp')};
+                font-size: 12px;
+                background: transparent;
+            }}
+            QPushButton {{
+                background: {t('acc')};
+                color: white;
+                border: none;
+                border-radius: 7px;
+                padding: 6px 20px;
+                font-size: 12px;
+                font-weight: 600;
+            }}
+            QPushButton:hover {{ border: 1px solid rgba(255,255,255,50); }}
+        """
+
         ruta, _ = QFileDialog.getOpenFileName(
             self, "Selecciona el Excel de Teams", "", "Excel (*.xlsx *.xls)")
         if not ruta:
             return
+
         try:
             import openpyxl
             wb = openpyxl.load_workbook(ruta, data_only=True)
             ws = wb.active
         except Exception as e:
-            QMessageBox.critical(self, "Error", f"No se pudo leer el archivo:\n{e}")
+            mb = QMessageBox(self)
+            mb.setWindowTitle("Error")
+            mb.setText(f"No se pudo leer el archivo:\n{e}")
+            mb.setStyleSheet(MSGBOX_STYLE)
+            mb.exec()
             return
+
+        def _hora(val):
+            if val is None: return "07:00"
+            if hasattr(val, 'hour'): return f"{val.hour:02d}:{val.minute:02d}"
+            if hasattr(val, 'strftime'): return val.strftime("%H:%M")
+            s = str(val).strip()
+            if ":" in s:
+                p = s.split(":")
+                try: return f"{int(p[0]):02d}:{int(p[1]):02d}"
+                except: pass
+            try:
+                f = float(s)
+                total = round(f * 24 * 60)
+                return f"{total//60:02d}:{total%60:02d}"
+            except: pass
+            return "07:00"
+
         clases_nuevas = []
-        for row in ws.iter_rows(min_row=5, values_only=True):
+        for row in ws.iter_rows(min_row=1, values_only=True):
             if not row[0]: continue
-            mat  = str(row[0]).strip()
-            ini  = str(row[1]).strip() if row[1] else "07:00"
-            fin  = str(row[2]).strip() if row[2] else "08:00"
-            link = str(row[3]).strip() if row[3] else ""
-            color= str(row[4]).strip() if row[4] else "#378ADD"
-            icono= str(row[5]).strip() if row[5] else "📘"
-            if mat:
-                clases_nuevas.append({
-                    "materia": mat, "hora_ini": ini, "hora_fin": fin,
-                    "link": link, "color": color, "icono": icono
-                })
+            mat = str(row[0]).strip()
+            if mat.lower() in ("materia", "asignatura", "curso", "subject"): continue
+            ini   = _hora(row[1] if len(row) > 1 else None)
+            fin   = _hora(row[2] if len(row) > 2 else None)
+            link  = str(row[3]).strip() if len(row) > 3 and row[3] else ""
+            color = str(row[4]).strip() if len(row) > 4 and row[4] else "#378ADD"
+            icono = str(row[5]).strip() if len(row) > 5 and row[5] else "📘"
+            clases_nuevas.append({
+                "materia": mat, "hora_ini": ini, "hora_fin": fin,
+                "link": link, "color": color, "icono": icono
+            })
+
         if not clases_nuevas:
-            QMessageBox.warning(self, "Aviso", "No se encontraron clases en el archivo.")
+            mb = QMessageBox(self)
+            mb.setWindowTitle("Aviso")
+            mb.setText("No se encontraron clases en el archivo.")
+            mb.setStyleSheet(MSGBOX_STYLE)
+            mb.exec()
             return
+
         if os.path.exists(CONFIG_PATH):
             with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
                 cfg = json.load(f)
             cfg["clases_teams"] = clases_nuevas
             with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
                 json.dump(cfg, f, indent=4, ensure_ascii=False)
-        QMessageBox.information(
-            self, "Importado",
-            f"✓ {len(clases_nuevas)} clase(s) importadas.\nReinicia la app para ver los cambios.")
+
+        # Recargar panel Teams en vivo
+        self._reconstruir_panel_teams()
+
+        mb = QMessageBox(self)
+        mb.setWindowTitle("Importado")
+        mb.setText(f"✓ {len(clases_nuevas)} clase(s) importadas correctamente.")
+        mb.setStyleSheet(MSGBOX_STYLE)
+        mb.exec()
         self.notificar("gn", "Teams actualizado", f"{len(clases_nuevas)} clases importadas")
 
     def resizeEvent(self, e):
