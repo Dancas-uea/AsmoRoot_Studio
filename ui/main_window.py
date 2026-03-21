@@ -864,7 +864,7 @@ class AsmoRootApp(QMainWindow):
         super().__init__()
         self.archivo_docx_sesion = ""
         self.archivo_pdf_sesion = ""
-        self.version_sistema = "v2.5"
+        self.version_sistema = "v2.6"
         self.tema_actual = "dark"
         self.pestanas = []
         self.contador_descargas = 0

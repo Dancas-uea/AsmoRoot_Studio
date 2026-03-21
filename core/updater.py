@@ -9,7 +9,7 @@ from PyQt6.QtCore import QThread, pyqtSignal, Qt
 # ─────────────────────────────────────────────
 #  CONFIGURACIÓN
 # ─────────────────────────────────────────────
-VERSION_ACTUAL = "2.5"
+VERSION_ACTUAL = "2.6"
 VERSION_URL    = "https://raw.githubusercontent.com/Dancas-uea/AsmoRoot_Studio/modular/version.json"
 
 
