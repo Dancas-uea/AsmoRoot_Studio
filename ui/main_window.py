@@ -2433,33 +2433,3 @@ class AsmoRootApp(QMainWindow):
         super().resizeEvent(e)
         if hasattr(self, 'notif_area') and hasattr(self, 'root'):
             self.notif_area.move(self.root.width() - 320, 60)
-
-
-# ─────────────────────────────────────────────
-#  ENTRY POINT
-# ─────────────────────────────────────────────
-if __name__ == "__main__":
-    # Habilitar DPI alto para pantallas retina/4K
-    QApplication.setHighDpiScaleFactorRoundingPolicy(
-        Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
-
-    app = QApplication(sys.argv)
-    app.setFont(QFont("Segoe UI", 10))
-    app.setStyle("Fusion")
-
-    # Tooltips globales estilo macOS
-    app.setStyleSheet("""
-        QToolTip {
-            background: rgba(25,25,40,240);
-            color: rgba(255,255,255,210);
-            border: 1px solid rgba(255,255,255,25);
-            border-radius: 7px;
-            padding: 5px 10px;
-            font-size: 11px;
-            font-family: 'Segoe UI', sans-serif;
-        }
-    """)
-
-    window = AsmoRootApp()
-    window.showMaximized()
-    sys.exit(app.exec())
