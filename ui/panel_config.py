@@ -248,10 +248,7 @@ class PanelConfiguracion(QScrollArea):
             f"QComboBox{{background:{CARD};color:{TP};border:1px solid {BRD};"
             f"border-radius:8px;padding:0 12px;font-size:12px;}}"
             f"QComboBox::drop-down{{border:none;width:20px;}}"
-            f"QComboBox::down-arrow{{image:none;width:0;}}"
-            f"QComboBox QAbstractItemView{{background:#1a1a2e;color:rgba(255,255,255,230);"
-            f"border:1px solid {BRD};selection-background-color:{ACCD};"
-            f"selection-color:{ACCT};}}")
+            f"QComboBox::down-arrow{{image:none;width:0;}}")
         semestres_pl = list(config.get("semestres", {}).keys())
         self.combo_sem_pl.addItems(semestres_pl)
         self.combo_sem_pl.currentTextChanged.connect(self._cargar_materias_plantillas)
@@ -442,9 +439,6 @@ class PanelConfiguracion(QScrollArea):
                 })
         self._guardar_config({"clases_teams": clases})
         self._notificar(f"{len(clases)} clase(s) guardadas")
-        # Bug 2 fix: reconstruir el panel Teams en la ventana principal
-        if self.parent_app and hasattr(self.parent_app, '_reconstruir_panel_teams'):
-            self.parent_app._reconstruir_panel_teams()
 
     def _importar_excel(self):
         ruta, _ = QFileDialog.getOpenFileName(
@@ -459,49 +453,16 @@ class PanelConfiguracion(QScrollArea):
             QMessageBox.critical(self, "Error", f"No se pudo leer el archivo:\n{e}")
             return
 
-        def _normalizar_hora(val):
-            """Convierte cualquier formato de hora a 'HH:MM'."""
-            if val is None:
-                return "07:00"
-            # datetime.time object (openpyxl lo devuelve cuando la celda es tiempo)
-            if hasattr(val, 'hour'):
-                return f"{val.hour:02d}:{val.minute:02d}"
-            # datetime.datetime object
-            if hasattr(val, 'strftime'):
-                return val.strftime("%H:%M")
-            s = str(val).strip()
-            # Formato "HH:MM:SS" o "HH:MM"
-            if ":" in s:
-                partes = s.split(":")
-                try:
-                    return f"{int(partes[0]):02d}:{int(partes[1]):02d}"
-                except (ValueError, IndexError):
-                    pass
-            # Número decimal de Excel (fracción del día): 0.5 = 12:00
-            try:
-                f = float(s)
-                total_min = round(f * 24 * 60)
-                return f"{total_min // 60:02d}:{total_min % 60:02d}"
-            except ValueError:
-                pass
-            return "07:00"
-
-        # Detectar fila de encabezado buscando la primera fila con dato en col A
-        # que no sea número puro (puede ser texto "Materia" o el primer nombre)
         clases_nuevas = []
-        for row in ws.iter_rows(min_row=1, values_only=True):
-            # Saltamos filas vacías en col A
+        for row in ws.iter_rows(min_row=5, values_only=True):
             if not row[0]:
                 continue
-            mat = str(row[0]).strip()
-            # Saltamos encabezados típicos
-            if mat.lower() in ("materia", "asignatura", "curso", "subject"):
-                continue
-            # col B = hora inicio, col C = hora fin, col D = link
-            ini  = _normalizar_hora(row[1] if len(row) > 1 else None)
-            fin  = _normalizar_hora(row[2] if len(row) > 2 else None)
-            link = str(row[3]).strip() if len(row) > 3 and row[3] else ""
-            clases_nuevas.append((mat, ini, fin, link))
+            mat  = str(row[0]).strip()
+            ini  = str(row[1]).strip() if row[1] else "07:00"
+            fin  = str(row[2]).strip() if row[2] else "08:00"
+            link = str(row[3]).strip() if row[3] else ""
+            if mat:
+                clases_nuevas.append((mat, ini, fin, link))
 
         if not clases_nuevas:
             QMessageBox.warning(self, "Aviso", "No se encontraron clases en el archivo.")

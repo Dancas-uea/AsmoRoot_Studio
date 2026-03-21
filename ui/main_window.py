@@ -26,6 +26,7 @@ from PyQt6.QtGui import (QIcon, QPixmap, QFont, QColor, QPalette, QDrag,
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtCore import QMimeData
 import win32com.client
+from ui.panel_config import PanelConfiguracion
 
 # ─────────────────────────────────────────────
 #  BLUR REAL DE WINDOWS (Mica / Acrylic API)
@@ -82,10 +83,18 @@ def aplicar_mica(hwnd):
 # ─────────────────────────────────────────────
 #  CONFIGURACIÓN
 # ─────────────────────────────────────────────
-PATH_RAIZ      = r"C:\Users\AsmoRoot\Desktop\Universidad Estatal Amazonica"
+# Leer PATH_RAIZ desde config global del usuario
+_ASMO_CFG_PATH = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
+if os.path.exists(_ASMO_CFG_PATH):
+    with open(_ASMO_CFG_PATH, 'r', encoding='utf-8') as _f:
+        _asmo_cfg = json.load(_f)
+    PATH_RAIZ = _asmo_cfg.get("path_raiz", os.path.join(os.path.expanduser("~"), "AsmoRoot"))
+else:
+    PATH_RAIZ = os.path.join(os.path.expanduser("~"), "AsmoRoot")
+
 PATH_LOGO      = os.path.join(PATH_RAIZ, "Logo", "logo.png")
 PATH_ICO       = os.path.join(PATH_RAIZ, "Logo", "logo.ico")
-ARCHIVO_CONFIG = os.path.join(PATH_RAIZ, "config_carrera.json")
+ARCHIVO_CONFIG = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
 
 
 def generar_icono_profesional():
@@ -191,6 +200,14 @@ def input_style():
         }}
         QComboBox::drop-down {{ border: none; width: 20px; }}
         QComboBox::down-arrow {{ image: none; width: 0; }}
+        QComboBox QAbstractItemView {{
+            background: {t('sb')};
+            color: {t('tp')};
+            border: 1px solid {t('brd')};
+            selection-background-color: {t('accd')};
+            selection-color: {t('acct')};
+            outline: none;
+        }}
     """
 
 
@@ -872,7 +889,7 @@ class AsmoRootApp(QMainWindow):
         if not os.path.exists(PATH_RAIZ):
             os.makedirs(PATH_RAIZ, exist_ok=True)
         if os.path.exists(ARCHIVO_CONFIG):
-            with open(ARCHIVO_CONFIG, 'r') as f:
+            with open(ARCHIVO_CONFIG, 'r', encoding='utf-8') as f:
                 self.config = json.load(f)
         else:
             self.config = {"semestres": {}, "ultimo_semestre": "", "ultima_materia": ""}
@@ -902,9 +919,11 @@ class AsmoRootApp(QMainWindow):
         self.btn_tab_uea = self._make_mtab("🌐  UEA", "uea")
         self.btn_tab_panel = self._make_mtab("📚  Gestión", "panel")
         self.btn_tab_teams = self._make_mtab("💜  Teams", "teams")
+        self.btn_tab_config = self._make_mtab("⚙️  Config", "config")
         mtabs_lay.addWidget(self.btn_tab_uea)
         mtabs_lay.addWidget(self.btn_tab_panel)
         mtabs_lay.addWidget(self.btn_tab_teams)
+        mtabs_lay.addWidget(self.btn_tab_config)
         mtabs_lay.addStretch()
         root_lay.addWidget(self.mtabs_bar)
 
@@ -922,6 +941,7 @@ class AsmoRootApp(QMainWindow):
         self._build_panel_uea()
         self._build_panel_gestion()
         self._build_panel_teams()
+        self._build_panel_config()
 
         self.panel_descargas = PanelDescargas(self)
         self.panel_descargas.hide()
@@ -946,7 +966,7 @@ class AsmoRootApp(QMainWindow):
         return btn
 
     def _switch_main(self, tab_id):
-        map_ = {"uea": (self.btn_tab_uea, 0), "panel": (self.btn_tab_panel, 1), "teams": (self.btn_tab_teams, 2)}
+        map_ = {"uea": (self.btn_tab_uea, 0), "panel": (self.btn_tab_panel, 1), "teams": (self.btn_tab_teams, 2), "config": (self.btn_tab_config, 3)}
         for k, (btn, idx) in map_.items():
             btn.setStyleSheet(self._mtab_style(k == tab_id))
         self.stack.setCurrentIndex(map_[tab_id][1])
@@ -955,12 +975,12 @@ class AsmoRootApp(QMainWindow):
             self.sidebar.setVisible(self.sidebar_visible)
         else:
             self.sidebar.show()
-        if tab_id == "teams":
+        if tab_id in ("teams", "config"):
             self.sb_tabs.hide()
             self.sb_tree_frame.hide()
             self.sb_dl_frame.hide()
             self.btn_new_sem.hide()
-            self.sb_calendar_frame.show()
+            self.sb_calendar_frame.show() if tab_id == "teams" else self.sb_calendar_frame.hide()
         else:
             self.sb_tabs.show()
             self.sb_tree_frame.show()
@@ -1622,48 +1642,14 @@ class AsmoRootApp(QMainWindow):
         import subprocess
 
         # Horario fijo — todos los sábados
-        CLASES = [
-            {
-                "materia": "Estructura de Datos",
-                "hora_ini": "07:30", "hora_fin": "08:30",
-                "color": "#5C6BC0",
-                "link": "https://teams.microsoft.com/meet/26418062592046?p=PDT8uTaYlyxvQ3bFKn",
-                "icono": "🗃️",
-            },
-            {
-                "materia": "Fundamentos de Sistemas Digitales",
-                "hora_ini": "08:45", "hora_fin": "09:45",
-                "color": "#00897B",
-                "link": "https://teams.microsoft.com/meet/28313346628339?p=YO6bvOle8dFedSLlqG",
-                "icono": "💻",
-            },
-            {
-                "materia": "Administración de Sistemas Operativos",
-                "hora_ini": "10:00", "hora_fin": "11:00",
-                "color": "#1E88E5",
-                "link": "https://teams.microsoft.com/meet/26838915440902?p=HJ6RVWEAnuI9FXia8P",
-                "icono": "⚙️",
-            },
-            {
-                "materia": "Metodología de la Investigación",
-                "hora_ini": "11:15", "hora_fin": "12:15",
-                "color": "#8E24AA",
-                "link": "https://teams.microsoft.com/meet/25578489420867?p=aqhgcWCq47yeN8fxGc",
-                "icono": "🔬",
-            },
-            {
-                "materia": "Instalaciones Eléctricas y Cableado",
-                "hora_ini": "12:30", "hora_fin": "13:30",
-                "color": "#F4511E",
-                "link": "https://teams.microsoft.com/meet/27778554442830?p=KsBcM9N1d1SCoDjGtL",
-                "icono": "⚡",
-            },
-        ]
-
-        self.panel_teams = QScrollArea()
-        self.panel_teams.setWidgetResizable(True)
-        self.panel_teams = QScrollArea()
-        self.panel_teams.setWidgetResizable(True)
+        # Leer clases desde config.json del usuario
+        _cfg_path = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
+        if os.path.exists(_cfg_path):
+            with open(_cfg_path, 'r', encoding='utf-8') as _f:
+                _cfg = json.load(_f)
+            CLASES = _cfg.get("clases_teams", [])
+        else:
+            CLASES = []
         self.panel_teams = QScrollArea()
         self.panel_teams.setWidgetResizable(True)
         self.panel_teams.setStyleSheet("""
@@ -1671,6 +1657,29 @@ class AsmoRootApp(QMainWindow):
             QLabel { text-decoration: none; border: none; }
             QFrame { text-decoration: none; }
         """)
+
+        if not CLASES:
+            inner = QWidget()
+            inner.setStyleSheet("background:transparent;")
+            lay = QVBoxLayout(inner)
+            lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lay.setSpacing(16)
+            ic = QLabel("💜")
+            ic.setStyleSheet("font-size:52px;border:none;background:transparent;")
+            ic.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl1 = QLabel("No tienes clases configuradas")
+            lbl1.setStyleSheet(
+                "color:rgba(255,255,255,115);font-size:16px;font-weight:600;border:none;background:transparent;")
+            lbl1.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl2 = QLabel("Ve a ⚙️ Config → Horario Teams e importa tu Excel")
+            lbl2.setStyleSheet("color:rgba(255,255,255,56);font-size:12px;border:none;background:transparent;")
+            lbl2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lay.addWidget(ic)
+            lay.addWidget(lbl1)
+            lay.addWidget(lbl2)
+            self.panel_teams.setWidget(inner)
+            self.stack.addWidget(self.panel_teams)
+            return
 
         inner = QWidget()
         inner.setStyleSheet("""
@@ -1718,12 +1727,31 @@ class AsmoRootApp(QMainWindow):
             }}
             QPushButton:hover {{ background: rgba(124,58,237,0.35); }}
         """)
-        btn_abrir_teams.clicked.connect(lambda: os.startfile("msteams:"))
+        btn_abrir_teams.clicked.connect(lambda: self._abrir_link_seguro("msteams:"))
+
+        btn_importar_excel = QPushButton("📥  Importar horario Excel")
+        btn_importar_excel.setFixedHeight(36)
+        btn_importar_excel.setStyleSheet("""
+            QPushButton {
+                background: rgba(40,200,64,0.20);
+                color: #28c840;
+                border: 1px solid rgba(40,200,64,0.40);
+                border-radius: 9px;
+                padding: 0 16px;
+                font-size: 12px;
+                font-weight: 600;
+                font-family: Inter, -apple-system, sans-serif;
+            }
+            QPushButton:hover { background: rgba(40,200,64,0.35); }
+        """)
+        btn_importar_excel.clicked.connect(self._importar_excel_teams)
 
         hdr.addWidget(logo_teams)
         hdr.addSpacing(12)
         hdr.addLayout(info)
         hdr.addStretch()
+        hdr.addWidget(btn_importar_excel)
+        hdr.addSpacing(8)
         hdr.addWidget(btn_abrir_teams)
         lay.addLayout(hdr)
 
@@ -1772,7 +1800,7 @@ class AsmoRootApp(QMainWindow):
             btn_lay.addWidget(ic)
             btn_lay.addWidget(nm)
 
-            btn.mousePressEvent = lambda e, u=url: os.startfile(u)
+            btn.mousePressEvent = lambda e, u=url: self._abrir_link_seguro(u)
             rapidos_row.addWidget(btn)
 
         lay.addLayout(rapidos_row)
@@ -1849,7 +1877,7 @@ class AsmoRootApp(QMainWindow):
                 QPushButton:hover {{ background: rgba(124,58,237,0.40); }}
             """)
             btn_unirse.clicked.connect(
-                lambda _, url=clase_prox["link"]: os.startfile(url))
+                lambda _, url=clase_prox["link"]: self._abrir_link_seguro(url))
 
             cp_lay.addWidget(ic_prox)
             cp_lay.addLayout(info_prox)
@@ -1909,7 +1937,7 @@ class AsmoRootApp(QMainWindow):
                 }}
             """)
             btn_join.clicked.connect(
-                lambda _, url=clase["link"]: os.startfile(url))
+                lambda _, url=clase["link"]: self._abrir_link_seguro(url))
 
             cl.addWidget(ic)
             cl.addLayout(info_cl)
@@ -1964,7 +1992,13 @@ class AsmoRootApp(QMainWindow):
     def _aplicar_tema(self):
         T = AsmoRootApp.CURRENT_THEME
         self.setStyleSheet(
-            f"background:{T['bg']};font-family:'SF Pro Display','Segoe UI',sans-serif;")
+            f"background:{T['bg']};font-family:'SF Pro Display','Segoe UI',sans-serif;"
+            f"QComboBox{{background:{T['inp']};color:{T['tp']};border:1px solid {T['brd']};"
+            f"border-radius:8px;padding:8px 12px;font-size:12px;}}"
+            f"QComboBox QAbstractItemView{{background:{T['sb']};color:{T['tp']};"
+            f"border:1px solid {T['brd']};selection-background-color:{T['accd']};"
+            f"selection-color:{T['acct']};outline:none;}}"
+        )
         self.root.setStyleSheet(f"""
             #root_frame {{
                 background: {T['win']};
@@ -2005,13 +2039,61 @@ class AsmoRootApp(QMainWindow):
                 and f not in ["Logo", "Navegador_Datos", "Google_Datos"]]
 
     def crear_nuevo_semestre(self):
-        sem, ok1 = QInputDialog.getText(self, "Nuevo Semestre", "Nombre del semestre:")
-        if not ok1 or not sem: return
-        mats_raw, ok2 = QInputDialog.getText(self, "Materias", "Materias separadas por coma:")
-        if not ok2 or not mats_raw: return
+        from PyQt6.QtWidgets import QDialog, QDialogButtonBox
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Nuevo Semestre")
+        dlg.setFixedWidth(420)
+        dlg.setStyleSheet(
+            f"background:{t('sb')};color:{t('tp')};"
+            f"font-family:'SF Pro Display','Segoe UI',sans-serif;")
+        lay = QVBoxLayout(dlg)
+        lay.setContentsMargins(24, 20, 24, 20)
+        lay.setSpacing(14)
+
+        ttl = QLabel("＋  Crear nuevo semestre")
+        ttl.setStyleSheet(label_style(15, "tp", "700"))
+        lay.addWidget(ttl)
+
+        lbl1 = QLabel("Nombre del semestre:")
+        lbl1.setStyleSheet(label_style(11, "ts", "500"))
+        inp_sem = QLineEdit()
+        inp_sem.setPlaceholderText("Ej: Quinto Semestre 2025")
+        inp_sem.setFixedHeight(38)
+        inp_sem.setStyleSheet(input_style())
+        lay.addWidget(lbl1)
+        lay.addWidget(inp_sem)
+
+        lbl2 = QLabel("Materias (separadas por coma):")
+        lbl2.setStyleSheet(label_style(11, "ts", "500"))
+        inp_mats = QLineEdit()
+        inp_mats.setPlaceholderText("Ej: Matemáticas, Física, Química")
+        inp_mats.setFixedHeight(38)
+        inp_mats.setStyleSheet(input_style())
+        lay.addWidget(lbl2)
+        lay.addWidget(inp_mats)
+
+        btns = QHBoxLayout()
+        btn_cancel = QPushButton("Cancelar")
+        btn_cancel.setFixedHeight(36)
+        btn_cancel.setStyleSheet(btn_style(t('card'), t('ts'), 8, "0 18px"))
+        btn_cancel.clicked.connect(dlg.reject)
+        btn_ok = QPushButton("✓  Crear semestre")
+        btn_ok.setFixedHeight(36)
+        btn_ok.setStyleSheet(btn_style(t('acc'), "white", 8, "0 18px"))
+        btn_ok.clicked.connect(dlg.accept)
+        btns.addWidget(btn_cancel)
+        btns.addWidget(btn_ok)
+        lay.addLayout(btns)
+
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+        sem = inp_sem.text().strip()
+        mats_raw = inp_mats.text().strip()
+        if not sem or not mats_raw:
+            return
         ruta_sem = os.path.join(PATH_RAIZ, sem)
         os.makedirs(os.path.join(ruta_sem, "Plantillas"), exist_ok=True)
-        for mat in [m.strip() for m in mats_raw.split(",")]:
+        for mat in [m.strip() for m in mats_raw.split(",") if m.strip()]:
             os.makedirs(os.path.join(ruta_sem, mat), exist_ok=True)
             with open(os.path.join(ruta_sem, "Plantillas", f"{mat}.docx"), 'wb'): pass
         self.actualizar_arbol()
@@ -2035,35 +2117,44 @@ class AsmoRootApp(QMainWindow):
             return 99
 
         for sem in sorted(self.obtener_semestres_raiz(), key=peso):
-            sem_node = QTreeWidgetItem([f"📂  {sem}"])
-            ruta_sem = os.path.join(PATH_RAIZ, sem)
-            materias = sorted([m for m in os.listdir(ruta_sem)
-                               if os.path.isdir(os.path.join(ruta_sem, m))])
-            for mat in materias:
-                mat_node = QTreeWidgetItem([f"📘  {mat}"])
-                ruta_mat = os.path.join(ruta_sem, mat)
-                archivos = sorted(
-                    [f for f in os.listdir(ruta_mat) if f.endswith((".docx", ".pdf"))],
-                    key=lambda x: os.path.getmtime(os.path.join(ruta_mat, x)), reverse=True
-                )
-                for arc in archivos:
-                    if query in arc.lower() or query in mat.lower():
-                        icon = "📝" if arc.endswith(".docx") else "📕"
-                        mat_node.addChild(QTreeWidgetItem([f"{icon}  {arc}"]))
-                if mat_node.childCount() > 0 or query == "":
-                    sem_node.addChild(mat_node)
-            if sem_node.childCount() > 0:
-                self.tree.addTopLevelItem(sem_node)
+            try:
+                sem_node = QTreeWidgetItem([f"📂  {sem}"])
+                ruta_sem = os.path.join(PATH_RAIZ, sem)
+                materias = sorted([m for m in os.listdir(ruta_sem)
+                                   if os.path.isdir(os.path.join(ruta_sem, m))])
+                for mat in materias:
+                    try:
+                        mat_node = QTreeWidgetItem([f"📘  {mat}"])
+                        ruta_mat = os.path.join(ruta_sem, mat)
+                        archivos = sorted(
+                            [f for f in os.listdir(ruta_mat) if f.endswith((".docx", ".pdf"))],
+                            key=lambda x: os.path.getmtime(os.path.join(ruta_mat, x)), reverse=True
+                        )
+                        for arc in archivos:
+                            if query in arc.lower() or query in mat.lower():
+                                icon = "📝" if arc.endswith(".docx") else "📕"
+                                mat_node.addChild(QTreeWidgetItem([f"{icon}  {arc}"]))
+                        if mat_node.childCount() > 0 or query == "":
+                            sem_node.addChild(mat_node)
+                    except Exception:
+                        pass
+                if sem_node.childCount() > 0:
+                    self.tree.addTopLevelItem(sem_node)
+            except Exception:
+                pass
 
         carpeta_dl = os.path.join(os.path.expanduser("~"), "Downloads")
         nodo_dl = QTreeWidgetItem(["⬇️  Descargas"])
-        if os.path.exists(carpeta_dl):
-            for arc in sorted(
-                    [f for f in os.listdir(carpeta_dl) if f.endswith((".docx", ".pdf"))],
-                    key=lambda x: os.path.getmtime(os.path.join(carpeta_dl, x)), reverse=True):
-                if query in arc.lower() or query == "":
-                    icon = "📝" if arc.endswith(".docx") else "📕"
-                    nodo_dl.addChild(QTreeWidgetItem([f"{icon}  {arc}"]))
+        try:
+            if os.path.exists(carpeta_dl):
+                for arc in sorted(
+                        [f for f in os.listdir(carpeta_dl) if f.endswith((".docx", ".pdf"))],
+                        key=lambda x: os.path.getmtime(os.path.join(carpeta_dl, x)), reverse=True):
+                    if query in arc.lower() or query == "":
+                        icon = "📝" if arc.endswith(".docx") else "📕"
+                        nodo_dl.addChild(QTreeWidgetItem([f"{icon}  {arc}"]))
+        except Exception:
+            pass
         self.tree.addTopLevelItem(nodo_dl)
 
     def actualizar_materias(self, semestre):
@@ -2166,21 +2257,39 @@ class AsmoRootApp(QMainWindow):
             self.btn_fix_pdf.setEnabled(True)
 
     def abrir_archivo_desde_arbol(self, item):
-        if item.childCount() == 0:
+        try:
+            if item.childCount() > 0:
+                return
             nombre_arc = item.text(0).split("  ", 1)[-1]
             padre = item.parent()
-            if padre and "Descargas" in padre.text(0):
+            if not padre:
+                return
+            if "Descargas" in padre.text(0):
                 carpeta = os.path.join(os.path.expanduser("~"), "Downloads")
                 ruta = os.path.join(carpeta, nombre_arc)
             else:
+                if not padre.parent():
+                    return
                 mat = padre.text(0).split("  ", 1)[-1]
                 sem = padre.parent().text(0).split("  ", 1)[-1]
                 ruta = os.path.join(PATH_RAIZ, sem, mat, nombre_arc)
-            if os.path.exists(ruta):
+            if not os.path.exists(ruta):
+                self.notificar("or", "Archivo no encontrado", nombre_arc[:40])
+                return
+            # Abrir PDF con navegador si no hay lector
+            if ruta.endswith(".pdf"):
+                try:
+                    os.startfile(ruta)
+                except Exception:
+                    import subprocess
+                    subprocess.Popen(f'start "" "{ruta}"', shell=True)
+            else:
                 os.startfile(ruta)
-                self.sb_lbl.setText(f"📂 Abriendo: {nombre_arc}")
-                QTimer.singleShot(4000, lambda: self.sb_lbl.setText("Sistema listo"))
-                self._agregar_pestana_archivo(ruta)
+            self.sb_lbl.setText(f"📂 Abriendo: {nombre_arc}")
+            QTimer.singleShot(4000, lambda: self.sb_lbl.setText("Sistema listo"))
+            self._agregar_pestana_archivo(ruta)
+        except Exception as e:
+            print(f"Error abriendo archivo: {e}")
 
     def mostrar_menu_contextual(self, posicion):
         item = self.tree.itemAt(posicion)
@@ -2264,7 +2373,7 @@ class AsmoRootApp(QMainWindow):
     # ── NAVEGADOR ─────────────────────────────
     def nueva_pestana(self, url=None, titulo="Nueva pestaña", fija=False):
         if url is None:
-            url = f"file:///{PATH_RAIZ}/nueva_pestana.html".replace("\\", "/")
+            url = "https://www.google.com"  # Nueva pestaña abre Google
         perfil = self.perfil_persistente if "uea.edu.ec" in url else self.perfil_google
         pestana = PestañaNavegador(perfil, self, url)
 
@@ -2428,6 +2537,86 @@ class AsmoRootApp(QMainWindow):
             self.showNormal()
         else:
             self.setWindowState(Qt.WindowState.WindowMaximized)
+
+
+    # ── PANEL CONFIGURACIÓN ───────────────────
+    def _build_panel_config(self):
+        CONFIG_PATH = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
+        self.panel_config = PanelConfiguracion(CONFIG_PATH, self)
+        self.stack.addWidget(self.panel_config)  # index 3
+
+    def _reconstruir_panel_teams(self):
+        """Bug 2 fix: reconstruye el panel Teams en vivo al guardar desde Config."""
+        # Buscar el widget actual en el stack (index 2)
+        old_widget = self.stack.widget(2)
+        if old_widget:
+            self.stack.removeWidget(old_widget)
+            old_widget.deleteLater()
+        self._build_panel_teams()
+        # Mover el nuevo widget al index 2 si quedó al final
+        new_idx = self.stack.indexOf(self.panel_teams)
+        if new_idx != 2:
+            self.stack.insertWidget(2, self.stack.widget(new_idx))
+        self.notificar("gn", "Teams actualizado", "Panel recargado en vivo")
+
+    def _abrir_link_seguro(self, url):
+        """Bug 3 fix: evita que un link malo cierre el programa."""
+        if not url or url.strip() in ("", "None", "nan"):
+            self.notificar("or", "Sin link", "Esta clase no tiene link configurado")
+            return
+        try:
+            os.startfile(url)
+        except Exception:
+            # Fallback: abrir con webbrowser (funciona con URLs http/https)
+            try:
+                import webbrowser
+                webbrowser.open(url)
+            except Exception as e:
+                self.notificar("rd", "Link inválido", str(e)[:60])
+
+    # ── IMPORTAR EXCEL TEAMS ─────────────────────
+    def _importar_excel_teams(self):
+        from PyQt6.QtWidgets import QFileDialog, QMessageBox
+        import json
+        CONFIG_PATH = os.path.join(os.path.expanduser("~"), "AsmoRoot_config.json")
+        ruta, _ = QFileDialog.getOpenFileName(
+            self, "Selecciona el Excel de Teams", "", "Excel (*.xlsx *.xls)")
+        if not ruta:
+            return
+        try:
+            import openpyxl
+            wb = openpyxl.load_workbook(ruta, data_only=True)
+            ws = wb.active
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"No se pudo leer el archivo:\n{e}")
+            return
+        clases_nuevas = []
+        for row in ws.iter_rows(min_row=5, values_only=True):
+            if not row[0]: continue
+            mat  = str(row[0]).strip()
+            ini  = str(row[1]).strip() if row[1] else "07:00"
+            fin  = str(row[2]).strip() if row[2] else "08:00"
+            link = str(row[3]).strip() if row[3] else ""
+            color= str(row[4]).strip() if row[4] else "#378ADD"
+            icono= str(row[5]).strip() if row[5] else "📘"
+            if mat:
+                clases_nuevas.append({
+                    "materia": mat, "hora_ini": ini, "hora_fin": fin,
+                    "link": link, "color": color, "icono": icono
+                })
+        if not clases_nuevas:
+            QMessageBox.warning(self, "Aviso", "No se encontraron clases en el archivo.")
+            return
+        if os.path.exists(CONFIG_PATH):
+            with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+            cfg["clases_teams"] = clases_nuevas
+            with open(CONFIG_PATH, 'w', encoding='utf-8') as f:
+                json.dump(cfg, f, indent=4, ensure_ascii=False)
+        QMessageBox.information(
+            self, "Importado",
+            f"✓ {len(clases_nuevas)} clase(s) importadas.\nReinicia la app para ver los cambios.")
+        self.notificar("gn", "Teams actualizado", f"{len(clases_nuevas)} clases importadas")
 
     def resizeEvent(self, e):
         super().resizeEvent(e)
