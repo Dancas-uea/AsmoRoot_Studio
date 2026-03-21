@@ -1,5 +1,5 @@
 {
-    "version": "2.1",
-    "url": "https://github.com/Dancas-uea/AsmoRoot_Studio/releases/download/v2.1/AsmoRoot.exe",
-    "notas": "Corrección de bugs - PATH dinámico, Teams, árbol, PDFs"
+    "version": "2.2",
+    "url": "https://github.com/Dancas-uea/AsmoRoot_Studio/releases/download/v2.2/AsmoRoot.exe",
+    "notas": "Sistema de auto-actualización agregado"
 }
