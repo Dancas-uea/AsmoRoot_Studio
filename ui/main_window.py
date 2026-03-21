@@ -97,16 +97,9 @@ else:
     PATH_RAIZ = os.path.join(os.path.expanduser("~"), "AsmoRoot")
 
 # Logo busca primero junto al .exe, luego en la carpeta del proyecto
-PATH_LOGO = (
-    os.path.join(_BASE_DIR, "assets", "logo.png")
-    if os.path.exists(os.path.join(_BASE_DIR, "assets", "logo.png"))
-    else os.path.join(_BASE_DIR, "logo.png")
-)
-PATH_ICO = (
-    os.path.join(_BASE_DIR, "assets", "logo.ico")
-    if os.path.exists(os.path.join(_BASE_DIR, "assets", "logo.ico"))
-    else os.path.join(_BASE_DIR, "logo.ico")
-)
+PATH_LOGO = os.path.join(_BASE_DIR, "logo.ico")
+PATH_ICO  = os.path.join(_BASE_DIR, "logo.ico")
+
 ARCHIVO_CONFIG = _ASMO_CFG_PATH
 
 
