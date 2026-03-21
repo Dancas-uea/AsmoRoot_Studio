@@ -1,5 +1,5 @@
 {
-    "version": "2.2",
-    "url": "https://github.com/Dancas-uea/AsmoRoot_Studio/releases/download/v2.2/AsmoRoot.exe",
-    "notas": "Sistema de auto-actualización agregado"
+    "version": "2.3",
+    "url": "https://github.com/Dancas-uea/AsmoRoot_Studio/releases/download/v2.3/AsmoRoot.exe",
+    "notas": "v2.3 — Corrección de 5 bugs: Excel Teams, panel actualiza en vivo, links seguros, combos visibles, ventana nuevo semestre"
 }
