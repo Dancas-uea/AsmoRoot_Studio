@@ -1022,7 +1022,7 @@ class AsmoRootApp(QMainWindow):
         logo_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.logo_label = QLabel()
         if os.path.exists(PATH_LOGO):
-            pix = QPixmap(PATH_LOGO).scaled(52, 52, Qt.AspectRatioMode.KeepAspectRatio,
+            pix = QPixmap(PATH_LOGO).scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
                                             Qt.TransformationMode.SmoothTransformation)
             self.logo_label.setPixmap(pix)
         else:

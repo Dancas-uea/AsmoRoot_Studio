@@ -267,7 +267,39 @@ class PanelConfiguracion(QScrollArea):
         if semestres_pl:
             self._cargar_materias_plantillas(semestres_pl[0])
 
-        # ── Sección 5: Zona de peligro ────────
+        # ── Sección 5: Actualizaciones ────────
+        self.lay.addWidget(_seccion("ACTUALIZACIONES"))
+        card_upd = QFrame()
+        card_upd.setStyleSheet(_card_style())
+        cupd_lay = QVBoxLayout(card_upd)
+        cupd_lay.setContentsMargins(20, 16, 20, 16)
+        cupd_lay.setSpacing(12)
+        upd_row = QHBoxLayout()
+        upd_info = QVBoxLayout()
+        upd_info.setSpacing(3)
+        lbl_upd_title = QLabel("AsmoRoot Academic Management System")
+        lbl_upd_title.setStyleSheet(_lbl(13, TP, "600"))
+        self.lbl_version_actual = QLabel("Versión actual: cargando...")
+        self.lbl_version_actual.setStyleSheet(_lbl(11, TM))
+        upd_info.addWidget(lbl_upd_title)
+        upd_info.addWidget(self.lbl_version_actual)
+        self.btn_buscar_upd = QPushButton("🔄  Buscar actualización")
+        self.btn_buscar_upd.setFixedHeight(38)
+        self.btn_buscar_upd.setFixedWidth(200)
+        self.btn_buscar_upd.setStyleSheet(_btn(ACC, "white", 9, "0 16px"))
+        self.btn_buscar_upd.clicked.connect(self._buscar_actualizacion)
+        upd_row.addLayout(upd_info)
+        upd_row.addStretch()
+        upd_row.addWidget(self.btn_buscar_upd)
+        cupd_lay.addLayout(upd_row)
+        self.lbl_upd_estado = QLabel("")
+        self.lbl_upd_estado.setStyleSheet(_lbl(11, GRN))
+        self.lbl_upd_estado.hide()
+        cupd_lay.addWidget(self.lbl_upd_estado)
+        self.lay.addWidget(card_upd)
+        self._cargar_version_actual()
+
+        # ── Sección 6: Zona de peligro ────────
 
         self.lay.addWidget(_seccion("ZONA DE PELIGRO"))
         card4 = QFrame()
@@ -556,6 +588,47 @@ class PanelConfiguracion(QScrollArea):
             self._cargar_materias_plantillas(semestre)
         except Exception as e:
             QMessageBox.critical(self, "Error", str(e))
+
+    # ── ACTUALIZACIONES ──────────────────────
+    def _cargar_version_actual(self):
+        try:
+            from core.updater import VERSION_ACTUAL
+            self.lbl_version_actual.setText(f"Versión actual: v{VERSION_ACTUAL}")
+        except Exception:
+            self.lbl_version_actual.setText("Versión actual: desconocida")
+
+    def _buscar_actualizacion(self):
+        import urllib.request, json, webbrowser
+        VERSION_URL = "https://raw.githubusercontent.com/Dancas-uea/AsmoRoot_Studio/modular/version.json"
+        self.btn_buscar_upd.setEnabled(False)
+        self.btn_buscar_upd.setText("Buscando...")
+        self.lbl_upd_estado.hide()
+        try:
+            req = urllib.request.urlopen(VERSION_URL, timeout=5)
+            data = json.loads(req.read().decode('utf-8'))
+            version_nueva = data.get("version", "0")
+            url_exe = data.get("url", "")
+            from core.updater import VERSION_ACTUAL
+            def _es_mayor(nueva, actual):
+                try:
+                    return [int(x) for x in nueva.split(".")] > [int(x) for x in actual.split(".")]
+                except: return False
+            if _es_mayor(version_nueva, VERSION_ACTUAL):
+                self.lbl_upd_estado.setStyleSheet(_lbl(11, "#28c840"))
+                self.lbl_upd_estado.setText(f"✅ Nueva versión v{version_nueva} disponible — abriendo descarga...")
+                self.lbl_upd_estado.show()
+                webbrowser.open(url_exe)
+            else:
+                self.lbl_upd_estado.setStyleSheet(_lbl(11, "#85B7EB"))
+                self.lbl_upd_estado.setText(f"✅ Ya tienes la última versión (v{VERSION_ACTUAL})")
+                self.lbl_upd_estado.show()
+        except Exception as e:
+            self.lbl_upd_estado.setStyleSheet(_lbl(11, "#ff5f57"))
+            self.lbl_upd_estado.setText(f"❌ Error al conectar: {str(e)[:50]}")
+            self.lbl_upd_estado.show()
+        finally:
+            self.btn_buscar_upd.setEnabled(True)
+            self.btn_buscar_upd.setText("🔄  Buscar actualización")
 
     # ── RESTABLECER ───────────────────────────
     def _restablecer(self):
