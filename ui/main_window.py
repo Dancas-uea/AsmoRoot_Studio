@@ -855,7 +855,7 @@ class TitleBar(QFrame):
 
 
 # ─────────────────────────────────────────────
-#  APP PRINCIPAL
+#  APP PRINCIPALll
 # ─────────────────────────────────────────────
 class AsmoRootApp(QMainWindow):
     CURRENT_THEME = THEME["dark"]
