@@ -75,8 +75,7 @@ class PestanaArchivo(QFrame):
         badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
         color = "rgba(163,45,45,90)" if self.es_pdf else "rgba(24,95,165,90)"
         txt = "#F09595" if self.es_pdf else "#85B7EB"
-        badge.setStyleSheet(
-            f"background:{color};color:{txt};border-radius:6px;font-weight:700;font-size:10px;border:none;")
+        badge.setStyleSheet(f"background:{color};color:{txt};border-radius:6px;font-weight:700;font-size:10px;border:none;")
 
         info = QVBoxLayout()
         info.setSpacing(0)
@@ -104,10 +103,16 @@ class PestanaArchivo(QFrame):
         lay.addWidget(btn_c)
 
     def reabrir(self):
-        os.startfile(self.ruta)
+        try:
+            os.startfile(self.ruta)
+        except Exception as e:
+            print(f"Error reabriendo archivo: {e}")
 
     def cerrar(self):
-        self.parent_app.cerrar_pestana_archivo(self)
+        try:
+            self.parent_app.cerrar_pestana_archivo(self)
+        except Exception as e:
+            print(f"Error cerrando pestaña: {e}")
 
 
 # ─────────────────────────────────────────────
@@ -246,12 +251,14 @@ class TitleBar(QFrame):
         lay.addWidget(self.btn_tema)
 
         lay.addStretch()
-
+        #Titulo icono
         ttl = QLabel(f"  {titulo}")
         ttl.setStyleSheet(label_style(12, "ts", "500"))
         lay.addWidget(ttl)
 
         lay.addStretch()
+
+        # Dots macOS (derecha) — orden: verde, amarillo, rojo
 
         dots_w = QWidget()
         dots_lay = QHBoxLayout(dots_w)

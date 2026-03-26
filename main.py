@@ -46,7 +46,7 @@ if __name__ == "__main__":
 
     # ── Primera vez → mostrar wizard ──────────
     if not config.get("configurado", False):
-        from ui.setup_wizard import SetupWizard
+        from ui.configuracion_inicial import SetupWizard
         wizard = SetupWizard(CONFIG_PATH)
         if wizard.exec() != SetupWizard.DialogCode.Accepted:
             sys.exit(0)

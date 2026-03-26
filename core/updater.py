@@ -208,3 +208,5 @@ del "%~f0"
         self.lbl_estado.setText(f"❌ Error: {msg[:50]}")
         self.btn_actualizar.setEnabled(True)
         self.btn_actualizar.setText("⬇  Reintentar")
+
+

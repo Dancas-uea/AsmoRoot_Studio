@@ -6,7 +6,6 @@ from PyQt6.QtWidgets import (
     QTimeEdit, QStackedWidget, QMessageBox
 )
 from PyQt6.QtCore import Qt, QTime
-from PyQt6.QtGui import QFont
 
 
 # ─────────────────────────────────────────────
@@ -610,3 +609,4 @@ class SetupWizard(QDialog):
         self.teams_lay.insertWidget(self.teams_lay.count() - 1, card)
         self.clases_widgets.append((card, inp_mat, t_ini, t_fin, inp_link))
         return card
+

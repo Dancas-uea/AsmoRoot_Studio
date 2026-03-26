@@ -41,8 +41,7 @@ class PanelDescargas(QFrame):
         btn_ver.clicked.connect(lambda: self.parent_app.abrir_explorador_descargas())
         btn_cerrar = QPushButton("✕")
         btn_cerrar.setFixedSize(24, 24)
-        btn_cerrar.setStyleSheet(
-            f"background:transparent;color:{t('tm')};border:none;font-size:13px;")
+        btn_cerrar.setStyleSheet(f"background:transparent;color:{t('tm')};border:none;font-size:13px;")
         btn_cerrar.clicked.connect(lambda: self.parent_app.cerrar_panel_descargas())
         hdr_lay.addWidget(ttl)
         hdr_lay.addStretch()
