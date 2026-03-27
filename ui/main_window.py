@@ -3,9 +3,10 @@ import shutil
 
 from PyQt6.QtWidgets import ( QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFrame, QMessageBox, QInputDialog, QMenu, QStackedWidget
 )
-from PyQt6.QtCore import (Qt, QUrl, QTimer,)
+from PyQt6.QtCore import (Qt, QUrl, QTimer, QSize, )
 from PyQt6.QtGui import (QIcon, QPixmap, QDrag)
 from PyQt6.QtCore import QMimeData
+import qtawesome as qta
 
 
 from ui.paneles.panel_uea import PanelUEA
@@ -79,10 +80,10 @@ class AsmoRootApp(QMainWindow):
         mtabs_lay = QHBoxLayout(self.mtabs_bar)
         mtabs_lay.setContentsMargins(14, 7, 14, 7)
         mtabs_lay.setSpacing(4)
-        self.btn_tab_uea = self._make_mtab("🌐  UEA", "uea")
-        self.btn_tab_panel = self._make_mtab("📚  Gestión", "panel")
-        self.btn_tab_teams = self._make_mtab("💜  Teams", "teams")
-        self.btn_tab_config = self._make_mtab("⚙️  Configuración", "config")
+        self.btn_tab_uea = self._make_mtab("  UEA", "uea", "mdi.web")
+        self.btn_tab_panel = self._make_mtab("  Gestión", "panel", "mdi.folder")
+        self.btn_tab_teams = self._make_mtab("  Teams", "teams", "mdi.account-group")
+        self.btn_tab_config = self._make_mtab("  Configuración", "config", "mdi.cog")
         mtabs_lay.addWidget(self.btn_tab_uea)
         mtabs_lay.addWidget(self.btn_tab_panel)
         mtabs_lay.addWidget(self.btn_tab_teams)
@@ -133,12 +134,21 @@ class AsmoRootApp(QMainWindow):
 
         self._switch_main("uea")
 
-    def _make_mtab(self, texto, tab_id):
+    def _make_mtab(self, texto, tab_id, icon_name=None):
         btn = QPushButton(texto)
         btn.setFixedHeight(30)
         btn.setCheckable(True)
         btn.setObjectName(f"mtab_{tab_id}")
         btn.setStyleSheet(self._mtab_style(False))
+
+        if icon_name:
+            try:
+                icon = qta.icon(icon_name, color=t('acct'))
+                btn.setIcon(icon)
+                btn.setIconSize(QSize(18, 18))
+            except Exception as e:
+                print(f"Error cargando icono {icon_name}: {e}")
+
         btn.clicked.connect(lambda: self._switch_main(tab_id))
         return btn
 
