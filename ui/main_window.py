@@ -9,6 +9,7 @@ from PyQt6.QtCore import QMimeData
 import qtawesome as qta
 
 
+
 from ui.paneles.panel_uea import PanelUEA
 from ui.paneles.panel_gestion import PanelGestion
 from ui.paneles.panel_teams import PanelTeams
