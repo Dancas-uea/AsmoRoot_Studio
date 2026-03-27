@@ -17,6 +17,9 @@ if os.path.exists(_ASMO_CFG_PATH):
 else:
     PATH_RAIZ = os.path.join(os.path.expanduser("~"), "AsmoRoot")
 
-PATH_LOGO = os.path.join(_BASE_DIR, "logo.ico")
-PATH_ICO = os.path.join(_BASE_DIR, "logo.ico")
+# Carpeta de iconos
+ICONS_DIR = os.path.join(_BASE_DIR, "assets", "icons")
+PATH_PNG = os.path.join(ICONS_DIR, "logo.png")
+PATH_LOGO = os.path.join(ICONS_DIR, "logo.ico")
+PATH_ICO = os.path.join(ICONS_DIR, "logo.ico")
 ARCHIVO_CONFIG = _ASMO_CFG_PATH

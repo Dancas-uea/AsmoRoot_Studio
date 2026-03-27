@@ -13,7 +13,7 @@ from ui.paneles.panel_gestion import PanelGestion
 from ui.paneles.panel_teams import PanelTeams
 from ui.paneles.panel_configuracion import PanelConfiguracion
 from core.blur_windows import aplicar_blur_windows, aplicar_mica
-from core.paths import PATH_RAIZ, PATH_LOGO, PATH_ICO, ARCHIVO_CONFIG
+from core.paths import PATH_RAIZ, PATH_LOGO, PATH_ICO, ARCHIVO_CONFIG, PATH_PNG
 from core.config import ConfigManager
 from core.utils import generar_icono_profesional
 from styles.helpers import t, btn_style, input_style, label_style
@@ -47,7 +47,10 @@ class AsmoRootApp(QMainWindow):
 
         if os.path.exists(PATH_ICO):
             self.setWindowIcon(QIcon(PATH_ICO))
-
+        if os.path.exists(PATH_ICO):
+            self.setWindowIcon(QIcon(PATH_ICO))
+        elif os.path.exists(PATH_PNG):
+            self.setWindowIcon(QIcon(PATH_PNG))
         self._build_ui()
         self.actualizar_arbol()
         self.cargar_ultima_sesion()
@@ -94,7 +97,7 @@ class AsmoRootApp(QMainWindow):
         root_lay.addWidget(self.body_widget, 1)
 
         # Sidebar
-        self.sidebar = Sidebar(self, PATH_RAIZ, PATH_LOGO, self.version_sistema)
+        self.sidebar = Sidebar(self, PATH_RAIZ, PATH_PNG, self.version_sistema)
         self.sidebar_visible = True
         self.body_lay.addWidget(self.sidebar)
 

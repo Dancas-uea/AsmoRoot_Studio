@@ -71,13 +71,18 @@ class Sidebar(QFrame):
         logo_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.logo_label = QLabel()
-        if os.path.exists(self.path_logo):
-            pix = QPixmap(self.path_logo).scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
-                                                 Qt.TransformationMode.SmoothTransformation)
+
+        # Buscar el PNG en la carpeta icons
+        png_path = os.path.join(self.path_logo, "logo.png") if os.path.isdir(self.path_logo) else self.path_logo
+
+        if os.path.exists(png_path):
+            pix = QPixmap(png_path).scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
+                                           Qt.TransformationMode.SmoothTransformation)
             self.logo_label.setPixmap(pix)
         else:
             self.logo_label.setText("🎓")
             self.logo_label.setStyleSheet("font-size:30px;")
+
         self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # Sombra en logo
