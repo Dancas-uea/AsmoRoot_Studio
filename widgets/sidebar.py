@@ -65,7 +65,7 @@ class Sidebar(QFrame):
     def _crear_logo(self):
         """Crea la sección del logo."""
         logo_frame = QFrame()
-        logo_frame.setFixedHeight(110)
+        logo_frame.setFixedHeight(180)
         logo_frame.setStyleSheet(f"border-bottom:1px solid {t('brd')};background:transparent;")
         logo_lay = QVBoxLayout(logo_frame)
         logo_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -76,7 +76,7 @@ class Sidebar(QFrame):
         png_path = os.path.join(self.path_logo, "logo.png") if os.path.isdir(self.path_logo) else self.path_logo
 
         if os.path.exists(png_path):
-            pix = QPixmap(png_path).scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio,
+            pix = QPixmap(png_path).scaled(100, 80, Qt.AspectRatioMode.KeepAspectRatio,
                                            Qt.TransformationMode.SmoothTransformation)
             self.logo_label.setPixmap(pix)
         else:
@@ -92,9 +92,9 @@ class Sidebar(QFrame):
         shadow.setOffset(0, 0)
         self.logo_label.setGraphicsEffect(shadow)
 
-        lbl_name = QLabel("AsmoRoot")
+        lbl_name = QLabel('<div style="text-align: center;">AsmoRoot<br><span style="font-size:11px;">Academic Management System</span></div>')
         lbl_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_name.setStyleSheet(label_style(11, "tp", "600"))
+        lbl_name.setStyleSheet(label_style(11, "grn", "500"))
         lbl_ver = QLabel(self.version_sistema)
         lbl_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl_ver.setStyleSheet(label_style(9, "acct"))

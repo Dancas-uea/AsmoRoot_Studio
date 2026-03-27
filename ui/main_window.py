@@ -32,7 +32,7 @@ class AsmoRootApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.version_sistema = "v2.6"
+        self.version_sistema = "v2.0.10"
         self.tema_actual = "dark"
         self.contador_descargas = 0
 
