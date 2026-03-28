@@ -3,23 +3,36 @@ import sys
 import json
 import threading
 import urllib.request
-from PyQt6.QtWidgets import QMessageBox, QPushButton, QHBoxLayout, QLabel, QFrame, QVBoxLayout, QProgressBar
+from PyQt6.QtWidgets import QMessageBox, QPushButton, QHBoxLayout, QLabel, QVBoxLayout, QProgressBar
 from PyQt6.QtCore import QThread, pyqtSignal, Qt
 
 # ─────────────────────────────────────────────
-#  CONFIGURACIÓN
+#  REPO  (no tocar)
 # ─────────────────────────────────────────────
-VERSION_ACTUAL = "2.7"
-VERSION_URL    = "https://raw.githubusercontent.com/Dancas-uea/AsmoRoot_Studio/modular/version.json"
+REPO_OWNER = "Dancas-uea"
+REPO_NAME  = "AsmoRoot_Studio"
+API_URL    = f"https://api.github.com/repos/{REPO_OWNER}/{REPO_NAME}/releases/latest"
+
+
+# ─────────────────────────────────────────────
+#  COMPARADOR DE VERSIONES (seguro: 1.9 < 1.10)
+# ─────────────────────────────────────────────
+def _es_mayor(nueva: str, actual: str) -> bool:
+    try:
+        n = [int(x) for x in nueva.strip("v").split(".")]
+        a = [int(x) for x in actual.strip("v").split(".")]
+        return n > a
+    except Exception:
+        return False
 
 
 # ─────────────────────────────────────────────
 #  HILO DE DESCARGA
 # ─────────────────────────────────────────────
 class DescargaHilo(QThread):
-    progreso    = pyqtSignal(int)
-    completado  = pyqtSignal(str)
-    error       = pyqtSignal(str)
+    progreso   = pyqtSignal(int)
+    completado = pyqtSignal(str)
+    error      = pyqtSignal(str)
 
     def __init__(self, url, destino):
         super().__init__()
@@ -40,48 +53,54 @@ class DescargaHilo(QThread):
 
 
 # ─────────────────────────────────────────────
-#  VERIFICADOR DE VERSIÓN
+#  VERIFICADOR PRINCIPAL
 # ─────────────────────────────────────────────
 class Updater:
-    def __init__(self, parent_app):
-        self.parent_app = parent_app
+    def __init__(self, parent_app, version_actual):
+        self.parent_app     = parent_app
+        self.version_actual = version_actual.strip("v")  # acepta "v2.0.10" o "2.0.10"
 
     def verificar(self):
-        """Verifica en segundo plano si hay actualización disponible."""
+        """Verifica en segundo plano usando GitHub Releases API."""
         hilo = threading.Thread(target=self._check, daemon=True)
         hilo.start()
 
     def _check(self):
         try:
-            req = urllib.request.urlopen(VERSION_URL, timeout=5)
-            data = json.loads(req.read().decode('utf-8'))
-            version_nueva = data.get("version", "0")
-            url_exe       = data.get("url", "")
-            notas         = data.get("notas", "")
+            req = urllib.request.Request(
+                API_URL,
+                headers={"User-Agent": "AsmoRoot-Updater"}
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
 
-            if self._es_mayor(version_nueva, VERSION_ACTUAL):
-                from PyQt6.QtCore import QMetaObject, Q_ARG
+            version_nueva = data.get("tag_name", "0").strip("v")
+            notas         = data.get("body", "Sin notas de versión.")
+            url_release   = data.get("html_url", "")
+
+            # Buscar .exe entre los assets del release
+            url_exe = ""
+            for asset in data.get("assets", []):
+                if asset.get("name", "").endswith(".exe"):
+                    url_exe = asset.get("browser_download_url", "")
+                    break
+
+            if _es_mayor(version_nueva, self.version_actual):
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(2000, lambda: self._mostrar_dialogo(
-                    version_nueva, url_exe, notas))
+                    version_nueva, url_exe, url_release, notas))
+
         except Exception as e:
             print(f"Updater: {e}")
 
-    def _es_mayor(self, nueva, actual):
-        try:
-            n = [int(x) for x in nueva.split(".")]
-            a = [int(x) for x in actual.split(".")]
-            return n > a
-        except Exception:
-            return False
-
-    def _mostrar_dialogo(self, version, url, notas):
+    # ── DIÁLOGO ───────────────────────────────
+    def _mostrar_dialogo(self, version, url_exe, url_release, notas):
         from PyQt6.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QProgressBar
         from PyQt6.QtCore import Qt
 
         dlg = QDialog(self.parent_app)
         dlg.setWindowTitle("Nueva actualización disponible")
-        dlg.setFixedSize(440, 260)
+        dlg.setFixedSize(440, 280)
         dlg.setStyleSheet("""
             QDialog {
                 background: #0d0d1c;
@@ -104,7 +123,7 @@ class Updater:
             "border:none;background:transparent;")
         lbl_titulo.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        lbl_notas = QLabel(notas)
+        lbl_notas = QLabel(notas[:180] + "…" if len(notas) > 180 else notas)
         lbl_notas.setStyleSheet(
             "color:rgba(255,255,255,115);font-size:11px;"
             "border:none;background:transparent;")
@@ -128,7 +147,8 @@ class Updater:
         self.lbl_estado.hide()
 
         btns = QHBoxLayout()
-        btn_omitir = QPushButton("Omitir")
+
+        btn_omitir = QPushButton("Más tarde")
         btn_omitir.setFixedHeight(36)
         btn_omitir.setStyleSheet("""
             QPushButton { background:rgba(255,255,255,10); color:rgba(255,255,255,115);
@@ -138,7 +158,13 @@ class Updater:
         """)
         btn_omitir.clicked.connect(dlg.reject)
 
-        self.btn_actualizar = QPushButton("⬇  Actualizar ahora")
+        if url_exe:
+            self.btn_actualizar = QPushButton("⬇  Actualizar ahora")
+            self.btn_actualizar.clicked.connect(lambda: self._descargar(url_exe, dlg))
+        else:
+            self.btn_actualizar = QPushButton("🌐  Ver en GitHub")
+            self.btn_actualizar.clicked.connect(lambda: self._abrir_release(url_release, dlg))
+
         self.btn_actualizar.setFixedHeight(36)
         self.btn_actualizar.setStyleSheet("""
             QPushButton { background:#378ADD; color:white; border:none;
@@ -146,8 +172,6 @@ class Updater:
             QPushButton:hover { border:1px solid rgba(255,255,255,50); }
             QPushButton:disabled { opacity:0.5; }
         """)
-        self.btn_actualizar.clicked.connect(
-            lambda: self._descargar(url, dlg))
 
         btns.addWidget(btn_omitir)
         btns.addWidget(self.btn_actualizar)
@@ -163,22 +187,36 @@ class Updater:
         self._dlg = dlg
         dlg.exec()
 
-    def _descargar(self, url, dlg):
+    # ── DESCARGA DIRECTA ──────────────────────
+    def _descargar(self, url_exe, dlg):
+        if not getattr(sys, "frozen", False):
+            QMessageBox.information(
+                self._dlg, "Modo desarrollo",
+                "La descarga automática solo funciona en el .exe compilado.\n"
+                "Descarga la nueva versión desde GitHub manualmente.")
+            return
+
         self.btn_actualizar.setEnabled(False)
         self.btn_actualizar.setText("Descargando...")
         self.progress.show()
         self.lbl_estado.show()
         self.lbl_estado.setText("Conectando...")
 
-        exe_actual = sys.executable if not getattr(sys, 'frozen', False) else sys.executable
+        exe_actual   = sys.executable
         destino_temp = exe_actual + ".new"
 
-        self.hilo = DescargaHilo(url, destino_temp)
+        self.hilo = DescargaHilo(url_exe, destino_temp)
         self.hilo.progreso.connect(self._on_progreso)
         self.hilo.completado.connect(lambda d: self._on_completado(d, exe_actual, dlg))
         self.hilo.error.connect(self._on_error)
         self.hilo.start()
 
+    def _abrir_release(self, url_release, dlg):
+        import webbrowser
+        webbrowser.open(url_release)
+        dlg.accept()
+
+    # ── CALLBACKS DESCARGA ────────────────────
     def _on_progreso(self, pct):
         self.progress.setValue(pct)
         self.lbl_estado.setText(f"Descargando... {pct}%")
@@ -187,16 +225,14 @@ class Updater:
         self.lbl_estado.setText("✅ Descarga completa — reinicia la app")
         self.btn_actualizar.setText("✅ Listo")
 
-        # Script bat para reemplazar el exe al cerrar
         bat = os.path.join(os.path.dirname(exe_actual), "_update.bat")
-        with open(bat, 'w') as f:
+        with open(bat, "w") as f:
             f.write(f"""@echo off
 timeout /t 2 /nobreak >nul
 move /y "{destino_temp}" "{exe_actual}"
 start "" "{exe_actual}"
 del "%~f0"
 """)
-
         QMessageBox.information(
             self._dlg,
             "Actualización lista",
@@ -208,5 +244,3 @@ del "%~f0"
         self.lbl_estado.setText(f"❌ Error: {msg[:50]}")
         self.btn_actualizar.setEnabled(True)
         self.btn_actualizar.setText("⬇  Reintentar")
-
-

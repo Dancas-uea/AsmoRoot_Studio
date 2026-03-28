@@ -21,3 +21,5 @@ google-genai
 
 # Windows COM (Word, Excel, etc.)
 pywin32
+
+customtkinter

@@ -59,7 +59,8 @@ if __name__ == "__main__":
 
     # ── Verificar actualizaciones en segundo plano ──
     from core.updater import Updater
-    updater = Updater(window)
+
+    updater = Updater(window, window.version_sistema)
     updater.verificar()
 
     sys.exit(app.exec())

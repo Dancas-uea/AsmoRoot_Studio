@@ -8,8 +8,6 @@ from PyQt6.QtGui import (QIcon, QPixmap, QDrag)
 from PyQt6.QtCore import QMimeData
 import qtawesome as qta
 
-
-
 from ui.paneles.panel_uea import PanelUEA
 from ui.paneles.panel_gestion import PanelGestion
 from ui.paneles.panel_teams import PanelTeams
@@ -25,7 +23,6 @@ from widgets.sidebar import Sidebar
 from widgets.statusbar import StatusBar
 from widgets.botonesmac_botonluzdia import AreaNotificaciones, TitleBar
 
-# Generar icono
 generar_icono_profesional(PATH_LOGO, PATH_ICO)
 
 
@@ -34,11 +31,12 @@ class AsmoRootApp(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.version_sistema = "v2.0.10"
+        # ── Solo cambias esta línea para cada release ──
+        self.version_sistema = "v2.8"
+
         self.tema_actual = "dark"
         self.contador_descargas = 0
 
-        # Configuración
         self.config_manager = ConfigManager(ARCHIVO_CONFIG, PATH_RAIZ)
         self.config = self.config_manager.config
 
@@ -49,10 +47,9 @@ class AsmoRootApp(QMainWindow):
 
         if os.path.exists(PATH_ICO):
             self.setWindowIcon(QIcon(PATH_ICO))
-        if os.path.exists(PATH_ICO):
-            self.setWindowIcon(QIcon(PATH_ICO))
         elif os.path.exists(PATH_PNG):
             self.setWindowIcon(QIcon(PATH_PNG))
+
         self._build_ui()
         self.actualizar_arbol()
         self.cargar_ultima_sesion()
@@ -81,9 +78,9 @@ class AsmoRootApp(QMainWindow):
         mtabs_lay = QHBoxLayout(self.mtabs_bar)
         mtabs_lay.setContentsMargins(14, 7, 14, 7)
         mtabs_lay.setSpacing(4)
-        self.btn_tab_uea = self._make_mtab("  UEA", "uea", "mdi.web")
-        self.btn_tab_panel = self._make_mtab("  Gestión", "panel", "mdi.folder")
-        self.btn_tab_teams = self._make_mtab("  Teams", "teams", "mdi.account-group")
+        self.btn_tab_uea    = self._make_mtab("  UEA",           "uea",    "mdi.web")
+        self.btn_tab_panel  = self._make_mtab("  Gestión",       "panel",  "mdi.folder")
+        self.btn_tab_teams  = self._make_mtab("  Teams",         "teams",  "mdi.account-group")
         self.btn_tab_config = self._make_mtab("  Configuración", "config", "mdi.cog")
         mtabs_lay.addWidget(self.btn_tab_uea)
         mtabs_lay.addWidget(self.btn_tab_panel)
@@ -98,7 +95,6 @@ class AsmoRootApp(QMainWindow):
         self.body_lay.setSpacing(0)
         root_lay.addWidget(self.body_widget, 1)
 
-        # Sidebar
         self.sidebar = Sidebar(self, PATH_RAIZ, PATH_PNG, self.version_sistema)
         self.sidebar_visible = True
         self.body_lay.addWidget(self.sidebar)
@@ -106,7 +102,6 @@ class AsmoRootApp(QMainWindow):
         self.stack = QStackedWidget()
         self.body_lay.addWidget(self.stack, 1)
 
-        # Paneles
         self.panel_uea = PanelUEA(self, PATH_RAIZ)
         self.stack.addWidget(self.panel_uea)
         self.panel_uea.btn_sb_tog.clicked.connect(self.toggle_sidebar)
@@ -125,7 +120,6 @@ class AsmoRootApp(QMainWindow):
         self.panel_descargas.hide()
         self.body_lay.addWidget(self.panel_descargas)
 
-        # Status Bar
         self.statusbar = StatusBar(self, self.version_sistema)
         root_lay.addWidget(self.statusbar)
 
@@ -141,7 +135,6 @@ class AsmoRootApp(QMainWindow):
         btn.setCheckable(True)
         btn.setObjectName(f"mtab_{tab_id}")
         btn.setStyleSheet(self._mtab_style(False))
-
         if icon_name:
             try:
                 icon = qta.icon(icon_name, color=t('acct'))
@@ -149,14 +142,13 @@ class AsmoRootApp(QMainWindow):
                 btn.setIconSize(QSize(18, 18))
             except Exception as e:
                 print(f"Error cargando icono {icon_name}: {e}")
-
         btn.clicked.connect(lambda: self._switch_main(tab_id))
         return btn
 
     def _switch_main(self, tab_id):
-        map_ = {"uea": (self.btn_tab_uea, 0),
-                "panel": (self.btn_tab_panel, 1),
-                "teams": (self.btn_tab_teams, 2),
+        map_ = {"uea":    (self.btn_tab_uea,    0),
+                "panel":  (self.btn_tab_panel,  1),
+                "teams":  (self.btn_tab_teams,  2),
                 "config": (self.btn_tab_config, 3)}
         for k, (btn, idx) in map_.items():
             btn.setStyleSheet(self._mtab_style(k == tab_id))
@@ -206,7 +198,7 @@ class AsmoRootApp(QMainWindow):
             f"border-radius:8px;padding:8px 12px;font-size:12px;}}"
             f"QComboBox QAbstractItemView{{background:{T['sb']};color:{T['tp']};"
             f"border:1px solid {T['brd']};selection-background-color:{T['accd']};"
-            f"selection-color:{T['acct']};outline:none;}}"
+            f"selection-color:{T['tp']};outline:none;}}"
         )
         self.root.setStyleSheet(f"""
             #root_frame {{
@@ -215,16 +207,27 @@ class AsmoRootApp(QMainWindow):
                 border: 1px solid {T['brd']};
             }}
         """)
-        self.titlebar.setStyleSheet(f"background:{T['bar']};border-bottom:1px solid {T['brd']};")
-        self.mtabs_bar.setStyleSheet(f"background:{T['bar']};border-bottom:1px solid {T['brd']};")
-        self.sidebar.setStyleSheet(f"background:{T['sb']};border-right:1px solid {T['brd']};")
+        self.titlebar.setStyleSheet(
+            f"background:{T['bar']};border-bottom:1px solid {T['brd']};")
+        self.mtabs_bar.setStyleSheet(
+            f"background:{T['bar']};border-bottom:1px solid {T['brd']};")
+        self.sidebar.setStyleSheet(
+            f"background:{T['sb']};border-right:1px solid {T['brd']};")
 
-        # Actualizar statusbar con el nuevo tema
+        # ── Actualizar todos los paneles ──────
         if hasattr(self, 'statusbar'):
             self.statusbar.actualizar_tema()
+        if hasattr(self, 'panel_gestion'):
+            self.panel_gestion.actualizar_tema()
+        if hasattr(self, 'panel_teams'):
+            self.panel_teams.actualizar_tema()
+        if hasattr(self, 'panel_config'):
+            self.panel_config.actualizar_tema()
 
         self.btn_tab_uea.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 0))
         self.btn_tab_panel.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 1))
+        self.btn_tab_teams.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 2))
+        self.btn_tab_config.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 3))
 
         hwnd = int(self.winId())
         aplicar_mica(hwnd)
@@ -318,7 +321,8 @@ class AsmoRootApp(QMainWindow):
         u_sem = self.config_manager.get("ultimo_semestre", "")
         if u_sem in self.obtener_semestres_raiz():
             if hasattr(self, 'panel_gestion'):
-                self.panel_gestion.cargar_ultima_sesion(u_sem, self.config_manager.get("ultima_materia", ""))
+                self.panel_gestion.cargar_ultima_sesion(
+                    u_sem, self.config_manager.get("ultima_materia", ""))
 
     # ── ÁRBOL: seleccionar / abrir ─────────────
     def seleccionar_desde_arbol(self, item):
@@ -326,7 +330,7 @@ class AsmoRootApp(QMainWindow):
             nombre_arc = item.text(0).split("  ", 1)[-1]
             if not nombre_arc.endswith(".docx"):
                 return
-            materia = item.parent().text(0).split("  ", 1)[-1]
+            materia  = item.parent().text(0).split("  ", 1)[-1]
             semestre = item.parent().parent().text(0).split("  ", 1)[-1]
             if hasattr(self, 'panel_gestion'):
                 self.panel_gestion.seleccionar_desde_arbol(semestre, materia, nombre_arc)
@@ -335,13 +339,10 @@ class AsmoRootApp(QMainWindow):
         try:
             if item.childCount() > 0:
                 return
-
             nombre_arc = item.text(0).split("  ", 1)[-1]
             padre = item.parent()
-
             if not padre:
                 return
-
             if "Descargas" in padre.text(0):
                 carpeta = os.path.join(os.path.expanduser("~"), "Downloads")
                 ruta = os.path.join(carpeta, nombre_arc)
@@ -365,7 +366,6 @@ class AsmoRootApp(QMainWindow):
                     self.notificar("bl", "Word abierto", nombre_arc[:40])
                 except Exception as e:
                     self.notificar("rd", "Error al abrir", str(e)[:60])
-
             elif ruta.endswith(".pdf"):
                 try:
                     os.startfile(ruta)
@@ -384,7 +384,6 @@ class AsmoRootApp(QMainWindow):
                         self.panel_gestion.seleccionar_desde_arbol(sem, mat, nombre_arc)
                 except Exception as e:
                     print(f"Error actualizando panel gestión: {e}")
-
         except Exception as e:
             print(f"Error general abriendo archivo: {e}")
             self.notificar("rd", "Error", str(e)[:60])
@@ -401,7 +400,7 @@ class AsmoRootApp(QMainWindow):
                 font-family:'SF Pro Display','Segoe UI',sans-serif;
             }}
             QMenu::item {{padding:7px 16px;border-radius:6px;}}
-            QMenu::item:selected {{background:{t('accd')};color:{t('acct')};}}
+            QMenu::item:selected {{background:{t('accd')};color:{t('tp')};}}
         """)
         menu.addAction("✏️  Renombrar").triggered.connect(
             lambda: self.gestionar_item_arbol(item, "renombrar"))
@@ -415,12 +414,12 @@ class AsmoRootApp(QMainWindow):
             ruta = os.path.join(PATH_RAIZ, texto)
             tipo = "Semestre"
         elif not item.parent().parent():
-            sem = item.parent().text(0).split("  ", 1)[-1]
+            sem  = item.parent().text(0).split("  ", 1)[-1]
             ruta = os.path.join(PATH_RAIZ, sem, texto)
             tipo = "Materia"
         else:
-            mat = item.parent().text(0).split("  ", 1)[-1]
-            sem = item.parent().parent().text(0).split("  ", 1)[-1]
+            mat  = item.parent().text(0).split("  ", 1)[-1]
+            sem  = item.parent().parent().text(0).split("  ", 1)[-1]
             ruta = os.path.join(PATH_RAIZ, sem, mat, texto)
             tipo = "Archivo"
 
@@ -435,9 +434,10 @@ class AsmoRootApp(QMainWindow):
                 except Exception as e:
                     QMessageBox.critical(self, "Error", str(e))
         elif operacion == "borrar":
-            if QMessageBox.question(self, "Eliminar", f"¿Eliminar {tipo}?\n({texto})",
-                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                                    ) == QMessageBox.StandardButton.Yes:
+            if QMessageBox.question(
+                self, "Eliminar", f"¿Eliminar {tipo}?\n({texto})",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+            ) == QMessageBox.StandardButton.Yes:
                 try:
                     shutil.rmtree(ruta) if os.path.isdir(ruta) else os.remove(ruta)
                     self.actualizar_arbol()
