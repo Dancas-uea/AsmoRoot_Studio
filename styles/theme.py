@@ -26,32 +26,5 @@ THEME = {
         "red":       "#ff5f57",
         "yel":       "#febc2e",
         "browserbg": "#0d0d1a",
-    },
-    "light": {
-        # ── Fondos — CORPORATIVO LIMPIO ─────────
-        "bg":        "#f0f2f7",           # fondo gris muy claro
-        "win":       "rgba(244,246,252,245)",  # ventana casi blanca
-        "sb":        "#e8eaf2",           # sidebar gris claro
-        "bar":       "#dfe2ee",           # barras
-        "card":      "rgba(255,255,255,240)",  # cards blancos
-        "cardh":     "rgba(255,255,255,255)",  # card hover blanco puro
-        "inp":       "rgba(255,255,255,220)",  # inputs blancos
-        "brd":       "rgba(0,0,0,14)",    # bordes sutiles oscuros
-
-        # ── Acento azul corporativo ──────────────
-        "acc":       "#1a6fc4",
-        "accd":      "rgba(26,111,196,18)",
-        "acct":      "#1a6fc4",
-
-        # ── Textos — OSCUROS sobre claro ────────
-        "tp":        "rgba(10,10,30,220)",     # texto primario oscuro
-        "ts":        "rgba(10,10,30,150)",     # texto secundario
-        "tm":        "rgba(10,10,30,90)",      # texto muted
-
-        # ── Estados ─────────────────────────────
-        "grn":       "#1a8c30",
-        "red":       "#c0392b",
-        "yel":       "#b8860b",
-        "browserbg": "#f5f6fa",
     }
 }

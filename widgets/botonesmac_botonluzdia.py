@@ -241,14 +241,6 @@ class TitleBar(QFrame):
         lay.setContentsMargins(14, 0, 14, 0)
         lay.setSpacing(8)
 
-        self.btn_tema = QPushButton("☀️")
-        self.btn_tema.setFixedSize(28, 28)
-        self.btn_tema.setStyleSheet(
-            f"QPushButton{{background:{t('card')};border:1px solid {t('brd')};border-radius:7px;font-size:13px;}}"
-            f"QPushButton:hover{{background:{t('cardh')};}}")
-        self.btn_tema.clicked.connect(parent.toggle_tema)
-        self.btn_tema.setToolTip("Cambiar tema")
-        lay.addWidget(self.btn_tema)
 
         lay.addStretch()
         #Titulo icono

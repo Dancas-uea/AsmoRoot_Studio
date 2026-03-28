@@ -34,7 +34,6 @@ class AsmoRootApp(QMainWindow):
         # ── Solo cambias esta línea para cada release ──
         self.version_sistema = "v2.8"
 
-        self.tema_actual = "dark"
         self.contador_descargas = 0
 
         self.config_manager = ConfigManager(ARCHIVO_CONFIG, PATH_RAIZ)
@@ -184,11 +183,6 @@ class AsmoRootApp(QMainWindow):
                 f"QPushButton:hover{{background:{t('cardh')};color:{t('tp')};}}")
 
     # ── TEMA ──────────────────────────────────
-    def toggle_tema(self):
-        self.tema_actual = "light" if self.tema_actual == "dark" else "dark"
-        AsmoRootApp.CURRENT_THEME = THEME[self.tema_actual]
-        self._aplicar_tema()
-        self.titlebar.btn_tema.setText("🌙" if self.tema_actual == "light" else "☀️")
 
     def _aplicar_tema(self):
         T = AsmoRootApp.CURRENT_THEME
