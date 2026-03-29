@@ -46,16 +46,25 @@ if __name__ == "__main__":
         app.setStyle("Fusion")
         
         # Intentar cargar el icono (probamos .ico y luego .png como respaldo)
+        debug_path = os.path.join(os.path.expanduser("~"), "debug_sga.txt")
+        with open(debug_path, "w") as f:
+            f.write(f"PATH_ICO: {PATH_ICO}\n")
+            f.write(f"PATH_PNG: {PATH_PNG}\n")
+            f.write(f"ICO exists: {os.path.exists(PATH_ICO)}\n")
+            f.write(f"PNG exists: {os.path.exists(PATH_PNG)}\n")
         app_icon = QIcon()
         if os.path.exists(PATH_ICO):
             app_icon.addFile(PATH_ICO)
         if os.path.exists(PATH_PNG):
             app_icon.addFile(PATH_PNG)
             
+        with open(debug_path, "a") as f:
+            f.write(f"Icon is null: {app_icon.isNull()}\n")
         if not app_icon.isNull():
             app.setWindowIcon(app_icon)
         else:
-            print(f"PELIGRO: No se pudo cargar ningún icono desde {PATH_ICO}")
+            with open(debug_path, "a") as f:
+                f.write(f"PELIGRO: No se pudo cargar ningún icono desde {PATH_ICO}\n")
 
         app.setStyleSheet("""
             QToolTip {
