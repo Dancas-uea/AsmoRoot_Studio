@@ -3,9 +3,11 @@ import os
 import json
 
 from PyQt6.QtWidgets import QApplication
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 from PyQt6.QtCore import Qt
 from PyQt6.QtWebEngineWidgets import QWebEngineView  # DEBE ir antes de QApplication
+
+from core.paths import PATH_ICO
 
 # ─────────────────────────────────────────────
 #  CONFIGURACIÓN
@@ -30,6 +32,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setFont(QFont("Segoe UI", 10))
     app.setStyle("Fusion")
+    # Establecer el ícono global de la app (funciona en barra de tareas y ventana)
+    if os.path.exists(PATH_ICO):
+        app.setWindowIcon(QIcon(PATH_ICO))
     app.setStyleSheet("""
         QToolTip {
             background: rgba(25,25,40,240);

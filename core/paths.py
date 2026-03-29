@@ -4,7 +4,7 @@ import os
 import json
 
 if getattr(sys, 'frozen', False):
-    _BASE_DIR = os.path.dirname(sys.executable)
+    _BASE_DIR = sys._MEIPASS
 else:
     _BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -19,7 +19,7 @@ else:
 
 # Carpeta de iconos
 ICONS_DIR = os.path.join(_BASE_DIR, "assets", "icons")
-PATH_PNG = os.path.join(ICONS_DIR, "logo.png")
-PATH_LOGO = os.path.join(ICONS_DIR, "logo.ico")
+PATH_LOGO = os.path.join(ICONS_DIR, "logo.png")
 PATH_ICO = os.path.join(ICONS_DIR, "logo.ico")
+PATH_PNG = PATH_LOGO
 ARCHIVO_CONFIG = _ASMO_CFG_PATH

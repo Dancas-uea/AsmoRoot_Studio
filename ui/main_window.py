@@ -15,7 +15,6 @@ from ui.paneles.panel_configuracion import PanelConfiguracion
 from core.blur_windows import aplicar_blur_windows, aplicar_mica
 from core.paths import PATH_RAIZ, PATH_LOGO, PATH_ICO, ARCHIVO_CONFIG, PATH_PNG
 from core.config import ConfigManager
-from core.utils import generar_icono_profesional
 from styles.helpers import t, btn_style, input_style, label_style
 from styles.theme import THEME
 from widgets.descargas import PanelDescargas, ExploradorDescargas
@@ -23,7 +22,6 @@ from widgets.sidebar import Sidebar
 from widgets.statusbar import StatusBar
 from widgets.botonesmac_botonluzdia import AreaNotificaciones, TitleBar
 
-generar_icono_profesional(PATH_LOGO, PATH_ICO)
 
 
 class AsmoRootApp(QMainWindow):
