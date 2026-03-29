@@ -2,29 +2,29 @@
 THEME = {
     "dark": {
         # ── Fondos ──────────────────────────────
-        "bg":        "#0d0d1a",           # fondo principal muy oscuro
-        "win":       "rgba(15,15,30,220)",# ventana translúcida
-        "sb":        "#111122",           # sidebar oscuro
-        "bar":       "#13132a",           # barras superiores/inferiores
-        "card":      "rgba(255,255,255,8)",   # cards sutiles
-        "cardh":     "rgba(255,255,255,16)",  # card hover
-        "inp":       "rgba(255,255,255,10)",  # inputs
-        "brd":       "rgba(255,255,255,18)",  # bordes
+        "bg":        "#080812",               # fondo principal muy oscuro
+        "win":       "rgba(12,12,24,215)",    # ventana translúcida
+        "sb":        "#0a0a16",               # sidebar oscuro
+        "bar":       "#0d0d1c",               # barras superiores/inferiores
+        "card":      "rgba(255,255,255,7)",   # cards sutiles
+        "cardh":     "rgba(255,255,255,14)",  # card hover
+        "inp":       "rgba(255,255,255,9)",   # inputs
+        "brd":       "rgba(255,255,255,12)",  # bordes más sutiles
 
-        # ── Acento azul ─────────────────────────
-        "acc":       "#378ADD",
-        "accd":      "rgba(55,138,221,35)",
-        "acct":      "#85B7EB",
+        # ── Acento azul profesional ─────────────
+        "acc":       "#4F8EF7",
+        "accd":      "rgba(79,142,247,18)",
+        "acct":      "#93B8FA",
 
         # ── Textos — BLANCOS sobre oscuro ───────
-        "tp":        "rgba(255,255,255,225)",  # texto primario
-        "ts":        "rgba(255,255,255,140)",  # texto secundario
-        "tm":        "rgba(255,255,255,70)",   # texto muted
+        "tp":        "rgba(255,255,255,220)",  # texto primario
+        "ts":        "rgba(255,255,255,130)",  # texto secundario
+        "tm":        "rgba(255,255,255,55)",   # texto muted
 
         # ── Estados ─────────────────────────────
-        "grn":       "#28c840",
-        "red":       "#ff5f57",
-        "yel":       "#febc2e",
-        "browserbg": "#0d0d1a",
+        "grn":       "#30D158",
+        "red":       "#FF453A",
+        "yel":       "#FFD60A",
+        "browserbg": "#080812",
     }
 }

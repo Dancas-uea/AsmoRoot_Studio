@@ -10,8 +10,13 @@ from PyQt6.QtWidgets import (
     QLineEdit, QFrame, QTreeWidget, QTreeWidgetItem, QInputDialog,
     QScrollArea, QMessageBox, QMenu, QGraphicsDropShadowEffect, QHeaderView
 )
-from PyQt6.QtCore import Qt, QTimer, QMimeData, QUrl
 from PyQt6.QtGui import QIcon, QPixmap, QColor, QDrag, QAction
+from PyQt6.QtCore import Qt, QTimer, QMimeData, QUrl
+
+try:
+    from PyQt6.QtSvgWidgets import QSvgWidget
+except ImportError:
+    QSvgWidget = None
 
 from styles.helpers import t, label_style, input_style, btn_style
 from core.monitor import MonitorArchivo
@@ -42,8 +47,11 @@ class Sidebar(QFrame):
         self.sidebar_lay.setContentsMargins(0, 0, 0, 0)
         self.sidebar_lay.setSpacing(0)
 
-        # Logo
+        # Header compacto (logo + nombre)
         self._crear_logo()
+
+        # Navegación principal
+        self._crear_nav()
 
         # Tabs árbol/descargas
         self._crear_tabs()
@@ -54,8 +62,8 @@ class Sidebar(QFrame):
         # Descargas frame
         self._crear_descargas_frame()
 
-        # Botón nuevo semestre
-        self._crear_boton_nuevo_semestre()
+        # Footer (Nuevo Semestre)
+        self._crear_footer()
 
         # Calendario
         self._crear_calendario()
@@ -63,46 +71,88 @@ class Sidebar(QFrame):
         self._sb_mode("tree")
 
     def _crear_logo(self):
-        """Crea la sección del logo."""
-        logo_frame = QFrame()
-        logo_frame.setFixedHeight(180)
-        logo_frame.setStyleSheet(f"border-bottom:1px solid {t('brd')};background:transparent;")
-        logo_lay = QVBoxLayout(logo_frame)
-        logo_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        """Crea el header compacto con logo e información."""
+        header = QFrame()
+        header.setFixedHeight(58)
+        header.setStyleSheet(f"border-bottom:1px solid {t('brd')};background:transparent;")
+        lay = QHBoxLayout(header)
+        lay.setContentsMargins(14, 0, 14, 0)
+        lay.setSpacing(10)
 
-        self.logo_label = QLabel()
+        # Ícono cuadrado con gradiente
+        icon_lbl = QLabel("A")
+        icon_lbl.setFixedSize(32, 32)
+        icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        icon_lbl.setStyleSheet("""
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
+                stop:0 #4F8EF7, stop:1 #7B5FF7);
+            border-radius: 8px;
+            color: white;
+            font-size: 15px;
+            font-weight: 700;
+            font-family: 'SF Pro Display','Segoe UI',sans-serif;
+            border: none;
+        """)
 
-        # Buscar el PNG en la carpeta icons
-        png_path = os.path.join(self.path_logo, "logo.png") if os.path.isdir(self.path_logo) else self.path_logo
-
-        if os.path.exists(png_path):
-            pix = QPixmap(png_path).scaled(100, 80, Qt.AspectRatioMode.KeepAspectRatio,
-                                           Qt.TransformationMode.SmoothTransformation)
-            self.logo_label.setPixmap(pix)
-        else:
-            self.logo_label.setText("🎓")
-            self.logo_label.setStyleSheet("font-size:30px;")
-
-        self.logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        # Sombra en logo
-        shadow = QGraphicsDropShadowEffect()
-        shadow.setBlurRadius(15)
-        shadow.setColor(QColor(55, 138, 221, 100))
-        shadow.setOffset(0, 0)
-        self.logo_label.setGraphicsEffect(shadow)
-
-        lbl_name = QLabel('<div style="text-align: center;">AsmoRoot<br><span style="font-size:11px;">Academic Management System</span></div>')
-        lbl_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_name.setStyleSheet(label_style(11, "grn", "500"))
+        # Texto
+        text_col = QVBoxLayout()
+        text_col.setSpacing(1)
+        lbl_name = QLabel("AsmoRoot")
+        lbl_name.setStyleSheet(
+            f"color:{t('tp')};font-size:13px;font-weight:600;"
+            f"font-family:'SF Pro Display','Segoe UI',sans-serif;border:none;")
         lbl_ver = QLabel(self.version_sistema)
-        lbl_ver.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_ver.setStyleSheet(label_style(9, "acct"))
+        lbl_ver.setStyleSheet(
+            f"color:{t('tm')};font-size:10px;"
+            f"font-family:'SF Pro Display','Segoe UI',sans-serif;border:none;")
+        text_col.addWidget(lbl_name)
+        text_col.addWidget(lbl_ver)
 
-        logo_lay.addWidget(self.logo_label)
-        logo_lay.addWidget(lbl_name)
-        logo_lay.addWidget(lbl_ver)
-        self.sidebar_lay.addWidget(logo_frame)
+        lay.addWidget(icon_lbl)
+        lay.addLayout(text_col)
+        lay.addStretch()
+        self.sidebar_lay.addWidget(header)
+
+    def _crear_nav(self):
+        """Crea los ítems de navegación principal (UEA/Gestión/Teams/Config)."""
+        nav_frame = QFrame()
+        nav_frame.setStyleSheet(f"background:transparent;border-bottom:1px solid {t('brd')};")
+        nav_lay = QVBoxLayout(nav_frame)
+        nav_lay.setContentsMargins(8, 8, 8, 8)
+        nav_lay.setSpacing(2)
+
+        # Label sección
+        sec_lbl = QLabel("NAVEGACIÓN")
+        sec_lbl.setStyleSheet(
+            f"color:{t('tm')};font-size:9.5px;letter-spacing:0.8px;"
+            f"font-weight:600;padding:0 6px 4px;"
+            f"font-family:'SF Pro Display','Segoe UI',sans-serif;border:none;")
+        nav_lay.addWidget(sec_lbl)
+
+        # SVG íconos
+        ico_uea    = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
+        ico_gest   = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
+        ico_teams  = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+        ico_config = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+
+        self._nav_btns = {}
+        items = [
+            ("uea",    "Portal UEA",    ico_uea),
+            ("panel",  "Gestión",       ico_gest),
+            ("teams",  "Teams",         ico_teams),
+            ("config", "Configuración", ico_config),
+        ]
+        for tab_id, label, svg_ico in items:
+            btn = QPushButton(f"  {label}")
+            btn.setFixedHeight(32)
+            btn.setCheckable(True)
+            btn.setObjectName(f"nav_{tab_id}")
+            btn.setStyleSheet(self._nav_style(False))
+            btn.clicked.connect(lambda checked, tid=tab_id: self._nav_clicked(tid))
+            self._nav_btns[tab_id] = btn
+            nav_lay.addWidget(btn)
+
+        self.sidebar_lay.addWidget(nav_frame)
 
     def _crear_tabs(self):
         """Crea los tabs para cambiar entre árbol y descargas."""
@@ -290,17 +340,26 @@ class Sidebar(QFrame):
         self.dl_srch.textChanged.connect(lambda q: self._cargar_dl_sidebar(q))
         self.sidebar_lay.addWidget(self.sb_dl_frame)
 
-    def _crear_boton_nuevo_semestre(self):
-        """Crea el botón para crear nuevo semestre."""
-        self.btn_new_sem = QPushButton("＋  Nuevo Semestre")
-        self.btn_new_sem.setFixedHeight(40)
+    def _crear_footer(self):
+        """Crea el footer del sidebar con botón nuevo semestre."""
+        footer = QFrame()
+        footer.setStyleSheet(f"border-top:1px solid {t('brd')};background:transparent;")
+        foot_lay = QVBoxLayout(footer)
+        foot_lay.setContentsMargins(8, 8, 8, 10)
+        foot_lay.setSpacing(0)
+
+        self.btn_new_sem = QPushButton("+ Nuevo Semestre")
+        self.btn_new_sem.setFixedHeight(32)
         self.btn_new_sem.setStyleSheet(
-            f"QPushButton{{background:{t('acc')};color:white;border:none;border-radius:0;"
-            f"border-top:1px solid {t('brd')};font-size:12px;font-weight:600;"
+            f"QPushButton{{background:{t('card')};color:{t('ts')};border:1px solid {t('brd')};"
+            f"border-radius:8px;font-size:11.5px;font-weight:500;"
             f"font-family:'SF Pro Display','Segoe UI',sans-serif;}}"
-            f"QPushButton:hover{{background:#4a9de0;}}")
+            f"QPushButton:hover{{background:{t('cardh')};color:{t('tp')};"
+            f"border:1px solid rgba(255,255,255,18);}}"
+        )
         self.btn_new_sem.clicked.connect(lambda: self.parent_app.crear_nuevo_semestre())
-        self.sidebar_lay.addWidget(self.btn_new_sem)
+        foot_lay.addWidget(self.btn_new_sem)
+        self.sidebar_lay.addWidget(footer)
 
     def _crear_calendario(self):
         """Crea el calendario del sidebar."""
@@ -379,8 +438,31 @@ class Sidebar(QFrame):
         lay.addStretch()
         self.sidebar_lay.addWidget(self.sb_calendar_frame, 1)
 
+    def _nav_style(self, activo):
+        """Estilo para los ítems de navegación principal."""
+        if activo:
+            return (f"QPushButton{{background:rgba(79,142,247,0.14);color:{t('acct')};"
+                    f"border:1px solid rgba(79,142,247,0.22);border-radius:8px;"
+                    f"font-size:12.5px;font-weight:500;text-align:left;padding:0 10px;"
+                    f"font-family:'SF Pro Display','Segoe UI',sans-serif;}}")
+        return (f"QPushButton{{background:transparent;color:{t('ts')};"
+                f"border:1px solid transparent;border-radius:8px;"
+                f"font-size:12.5px;font-weight:450;text-align:left;padding:0 10px;"
+                f"font-family:'SF Pro Display','Segoe UI',sans-serif;}}"
+                f"QPushButton:hover{{background:{t('cardh')};color:{t('tp')};}}")
+
+    def _nav_clicked(self, tab_id):
+        """Maneja click en nav principal y notifica a la ventana."""
+        self.set_active_nav(tab_id)
+        self.parent_app._switch_main(tab_id)
+
+    def set_active_nav(self, tab_id):
+        """Actualiza visualmente el nav activo."""
+        for tid, btn in self._nav_btns.items():
+            btn.setStyleSheet(self._nav_style(tid == tab_id))
+
     def _sbt_style(self, activo):
-        """Estilo para los tabs del sidebar."""
+        """Estilo para los tabs árbol/descargas."""
         if activo:
             return (f"QPushButton{{background:transparent;color:{t('acct')};"
                     f"border:none;border-bottom:2px solid {t('acc')};"

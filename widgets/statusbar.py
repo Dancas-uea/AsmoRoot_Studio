@@ -15,7 +15,7 @@ class StatusBar(QFrame):
         self.parent = parent
         self.version_sistema = version_sistema
 
-        self.setFixedHeight(28)
+        self.setFixedHeight(26)
         self.setStyleSheet(f"background:{t('bar')};border-top:1px solid {t('brd')};")
 
         self._setup_ui()
@@ -28,23 +28,23 @@ class StatusBar(QFrame):
 
         # Indicador de estado (punto verde)
         self.dot = QLabel("●")
-        self.dot.setStyleSheet(f"color:{t('grn')};font-size:9px;border:none;")
+        self.dot.setStyleSheet(f"color:{t('grn')};font-size:8.5px;border:none;")
 
         # Mensaje principal
         self.sb_lbl = QLabel("Sistema listo")
-        self.sb_lbl.setStyleSheet(label_style(10, "ts"))
+        self.sb_lbl.setStyleSheet(label_style(9.5, "ts"))
 
         # Separador
         sep = QLabel("·")
-        sep.setStyleSheet(label_style(10, "tm"))
+        sep.setStyleSheet(label_style(9.5, "tm"))
 
         # Mensaje secundario
         self.sb_lbl2 = QLabel("")
-        self.sb_lbl2.setStyleSheet(label_style(10, "ts"))
+        self.sb_lbl2.setStyleSheet(label_style(9.5, "ts"))
 
         # Versión
         ver = QLabel(f"AsmoRoot {self.version_sistema}")
-        ver.setStyleSheet(label_style(10, "tm"))
+        ver.setStyleSheet(label_style(9.5, "tm"))
 
         sb_lay.addWidget(self.dot)
         sb_lay.addWidget(self.sb_lbl)

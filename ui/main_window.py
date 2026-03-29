@@ -3,10 +3,8 @@ import shutil
 
 from PyQt6.QtWidgets import ( QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QLineEdit, QFrame, QMessageBox, QInputDialog, QMenu, QStackedWidget
 )
-from PyQt6.QtCore import (Qt, QUrl, QTimer, QSize, )
-from PyQt6.QtGui import (QIcon, QPixmap, QDrag)
-from PyQt6.QtCore import QMimeData
-import qtawesome as qta
+from PyQt6.QtCore import Qt, QUrl, QTimer, QMimeData
+from PyQt6.QtGui import QIcon, QPixmap, QDrag
 
 from ui.paneles.panel_uea import PanelUEA
 from ui.paneles.panel_gestion import PanelGestion
@@ -30,7 +28,7 @@ class AsmoRootApp(QMainWindow):
     def __init__(self):
         super().__init__()
         # ── Solo cambias esta línea para cada release ──
-        self.version_sistema = "v2.8"
+        self.version_sistema = "v2.9"
 
         self.contador_descargas = 0
 
@@ -54,9 +52,9 @@ class AsmoRootApp(QMainWindow):
 
     def showEvent(self, e):
         super().showEvent(e)
-        hwnd = int(self.winId())
-        aplicar_mica(hwnd)
-        aplicar_blur_windows(hwnd)
+        # hwnd = int(self.winId())
+        # aplicar_mica(hwnd)
+        # aplicar_blur_windows(hwnd)
 
     # ── Build UI ──────────────────────────────
     def _build_ui(self):
@@ -69,22 +67,6 @@ class AsmoRootApp(QMainWindow):
 
         self.titlebar = TitleBar(self)
         root_lay.addWidget(self.titlebar)
-
-        self.mtabs_bar = QFrame()
-        self.mtabs_bar.setFixedHeight(46)
-        mtabs_lay = QHBoxLayout(self.mtabs_bar)
-        mtabs_lay.setContentsMargins(14, 7, 14, 7)
-        mtabs_lay.setSpacing(4)
-        self.btn_tab_uea    = self._make_mtab("  UEA",           "uea",    "mdi.web")
-        self.btn_tab_panel  = self._make_mtab("  Gestión",       "panel",  "mdi.folder")
-        self.btn_tab_teams  = self._make_mtab("  Teams",         "teams",  "mdi.account-group")
-        self.btn_tab_config = self._make_mtab("  Configuración", "config", "mdi.cog")
-        mtabs_lay.addWidget(self.btn_tab_uea)
-        mtabs_lay.addWidget(self.btn_tab_panel)
-        mtabs_lay.addWidget(self.btn_tab_teams)
-        mtabs_lay.addWidget(self.btn_tab_config)
-        mtabs_lay.addStretch()
-        root_lay.addWidget(self.mtabs_bar)
 
         self.body_widget = QWidget()
         self.body_lay = QHBoxLayout(self.body_widget)
@@ -126,30 +108,16 @@ class AsmoRootApp(QMainWindow):
 
         self._switch_main("uea")
 
-    def _make_mtab(self, texto, tab_id, icon_name=None):
-        btn = QPushButton(texto)
-        btn.setFixedHeight(30)
-        btn.setCheckable(True)
-        btn.setObjectName(f"mtab_{tab_id}")
-        btn.setStyleSheet(self._mtab_style(False))
-        if icon_name:
-            try:
-                icon = qta.icon(icon_name, color=t('acct'))
-                btn.setIcon(icon)
-                btn.setIconSize(QSize(18, 18))
-            except Exception as e:
-                print(f"Error cargando icono {icon_name}: {e}")
-        btn.clicked.connect(lambda: self._switch_main(tab_id))
-        return btn
-
     def _switch_main(self, tab_id):
-        map_ = {"uea":    (self.btn_tab_uea,    0),
-                "panel":  (self.btn_tab_panel,  1),
-                "teams":  (self.btn_tab_teams,  2),
-                "config": (self.btn_tab_config, 3)}
-        for k, (btn, idx) in map_.items():
-            btn.setStyleSheet(self._mtab_style(k == tab_id))
-        self.stack.setCurrentIndex(map_[tab_id][1])
+        map_ = {"uea":    0,
+                "panel":  1,
+                "teams":  2,
+                "config": 3}
+        self.stack.setCurrentIndex(map_.get(tab_id, 0))
+
+        # Notificar al sidebar qué nav está activo
+        if hasattr(self, 'sidebar') and hasattr(self.sidebar, 'set_active_nav'):
+            self.sidebar.set_active_nav(tab_id)
 
         if tab_id == "uea":
             self.sidebar.setVisible(self.sidebar_visible)
@@ -169,16 +137,7 @@ class AsmoRootApp(QMainWindow):
             self.sidebar.sb_calendar_frame.hide()
             self.sidebar._sb_mode("tree")
 
-    def _mtab_style(self, activo):
-        if activo:
-            return (f"QPushButton{{background:{t('accd')};color:{t('acct')};"
-                    f"border:1px solid rgba(55,138,221,80);border-radius:8px;"
-                    f"padding:0 14px;font-size:12px;font-weight:500;"
-                    f"font-family:'SF Pro Display','Segoe UI',sans-serif;}}")
-        return (f"QPushButton{{background:transparent;color:{t('tm')};"
-                f"border:1px solid transparent;border-radius:8px;padding:0 14px;"
-                f"font-size:12px;font-family:'SF Pro Display','Segoe UI',sans-serif;}}"
-                f"QPushButton:hover{{background:{t('cardh')};color:{t('tp')};}}")
+
 
     # ── TEMA ──────────────────────────────────
 
@@ -201,12 +160,10 @@ class AsmoRootApp(QMainWindow):
         """)
         self.titlebar.setStyleSheet(
             f"background:{T['bar']};border-bottom:1px solid {T['brd']};")
-        self.mtabs_bar.setStyleSheet(
-            f"background:{T['bar']};border-bottom:1px solid {T['brd']};")
         self.sidebar.setStyleSheet(
             f"background:{T['sb']};border-right:1px solid {T['brd']};")
 
-        # ── Actualizar todos los paneles ──────
+        # ── Actualizar todos los paneles ────
         if hasattr(self, 'statusbar'):
             self.statusbar.actualizar_tema()
         if hasattr(self, 'panel_gestion'):
@@ -216,14 +173,10 @@ class AsmoRootApp(QMainWindow):
         if hasattr(self, 'panel_config'):
             self.panel_config.actualizar_tema()
 
-        self.btn_tab_uea.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 0))
-        self.btn_tab_panel.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 1))
-        self.btn_tab_teams.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 2))
-        self.btn_tab_config.setStyleSheet(self._mtab_style(self.stack.currentIndex() == 3))
+        # hwnd = int(self.winId())
+        # aplicar_mica(hwnd)
+        # aplicar_blur_windows(hwnd)
 
-        hwnd = int(self.winId())
-        aplicar_mica(hwnd)
-        aplicar_blur_windows(hwnd)
 
     # ── SIDEBAR TOGGLE ────────────────────────
     def toggle_sidebar(self):

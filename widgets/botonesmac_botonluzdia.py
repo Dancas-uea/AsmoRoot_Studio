@@ -241,26 +241,16 @@ class TitleBar(QFrame):
         lay.setContentsMargins(14, 0, 14, 0)
         lay.setSpacing(8)
 
-
-        lay.addStretch()
-        #Titulo icono
-        ttl = QLabel(f"  {titulo}")
-        ttl.setStyleSheet(label_style(12, "ts", "500"))
-        lay.addWidget(ttl)
-
-        lay.addStretch()
-
-        # Dots macOS (derecha) — orden: verde, amarillo, rojo
-
+        # Dots macOS (izquierda) — orden: rojo, amarillo, verde
         dots_w = QWidget()
         dots_lay = QHBoxLayout(dots_w)
         dots_lay.setContentsMargins(0, 0, 0, 0)
         dots_lay.setSpacing(7)
 
         dot_data = [
-            ("#28c840", parent._toggle_maximized, "Pantalla completa"),
-            ("#febc2e", parent.showMinimized,      "Minimizar"),
             ("#ff5f57", parent.close,              "Cerrar"),
+            ("#febc2e", parent.showMinimized,      "Minimizar"),
+            ("#28c840", parent._toggle_maximized, "Pantalla completa"),
         ]
         for color, fn, tip in dot_data:
             d = QPushButton()
@@ -280,6 +270,19 @@ class TitleBar(QFrame):
             dots_lay.addWidget(d)
 
         lay.addWidget(dots_w)
+        lay.addStretch()
+
+        # Titulo icono
+        ttl = QLabel(titulo)
+        ttl.setStyleSheet(label_style(12, "ts", "500"))
+        lay.addWidget(ttl)
+
+        lay.addStretch()
+        
+        # Espaciador para equilibrar el lado derecho
+        spacer = QWidget()
+        spacer.setFixedSize(60, 10)
+        lay.addWidget(spacer)
 
     def mousePressEvent(self, e):
         if e.button() == Qt.MouseButton.LeftButton:

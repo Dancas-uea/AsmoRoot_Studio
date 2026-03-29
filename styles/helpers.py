@@ -6,10 +6,12 @@
 # ─────────────────────────────────────────────
 
 
+from styles.theme import THEME
+
 def t(key):
     """Devuelve el color del tema activo por clave."""
-    from ui.main_window import AsmoRootApp
-    return AsmoRootApp.CURRENT_THEME.get(key, "#ffffff")
+    theme = THEME.get("dark", {})
+    return theme.get(key, "#ffffff")
 
 
 def btn_style(bg="#378ADD", color="white", radius=8, padding="10px 18px"):
