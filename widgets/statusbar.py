@@ -43,7 +43,7 @@ class StatusBar(QFrame):
         self.sb_lbl2.setStyleSheet(label_style(9.5, "ts"))
 
         # Versión
-        ver = QLabel(f"AsmoRoot {self.version_sistema}")
+        ver = QLabel(f"SGA {self.version_sistema}")
         ver.setStyleSheet(label_style(9.5, "tm"))
 
         sb_lay.addWidget(self.dot)

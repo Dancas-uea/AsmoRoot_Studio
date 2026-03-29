@@ -59,7 +59,7 @@ def label_style(size=11, color_key="ts", weight="normal"):
     return (
         f"color: {t(color_key)}; font-size: {size}px; font-weight: {weight}; "
         f"font-family: 'SF Pro Display', 'Segoe UI', sans-serif; "
-        f"border: none; text-decoration: none;"
+        f"border: none; text-decoration: none; background: transparent;"
     )
 
 

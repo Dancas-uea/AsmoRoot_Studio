@@ -8,10 +8,11 @@ from datetime import datetime
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QLineEdit, QFrame, QTreeWidget, QTreeWidgetItem, QInputDialog,
-    QScrollArea, QMessageBox, QMenu, QGraphicsDropShadowEffect, QHeaderView
+    QScrollArea, QMessageBox, QMenu, QGraphicsDropShadowEffect, QHeaderView,
+    QFileIconProvider
 )
 from PyQt6.QtGui import QIcon, QPixmap, QColor, QDrag, QAction
-from PyQt6.QtCore import Qt, QTimer, QMimeData, QUrl
+from PyQt6.QtCore import Qt, QTimer, QMimeData, QUrl, QFileInfo
 
 try:
     from PyQt6.QtSvgWidgets import QSvgWidget
@@ -32,8 +33,9 @@ class Sidebar(QFrame):
         self.path_raiz = path_raiz
         self.path_logo = path_logo
         self.version_sistema = version_sistema
-
+        self.search_ent = None
         self.sidebar_visible = True
+        self.icon_provider = QFileIconProvider()
 
         self.setFixedWidth(230)
         self.setStyleSheet(f"background:{t('sb')};border-right:1px solid {t('brd')};")
@@ -91,9 +93,9 @@ class Sidebar(QFrame):
         # Texto
         text_col = QVBoxLayout()
         text_col.setSpacing(1)
-        lbl_name = QLabel("AsmoRoot")
+        lbl_name = QLabel("SGA")
         lbl_name.setStyleSheet(
-            f"color:{t('tp')};font-size:13px;font-weight:600;"
+            f"color:{t('tp')};font-size:15px;font-weight:800;"
             f"font-family:'SF Pro Display','Segoe UI',sans-serif;border:none;")
         lbl_ver = QLabel(self.version_sistema)
         lbl_ver.setStyleSheet(
@@ -109,6 +111,10 @@ class Sidebar(QFrame):
 
     def _crear_nav(self):
         """Crea los ítems de navegación principal (UEA/Gestión/Teams/Config)."""
+        from PyQt6.QtGui import QIcon, QPixmap, QPainter, QColor
+        from PyQt6.QtSvg import QSvgRenderer
+        from PyQt6.QtCore import QByteArray
+
         nav_frame = QFrame()
         nav_frame.setStyleSheet(f"background:transparent;border-bottom:1px solid {t('brd')};")
         nav_lay = QVBoxLayout(nav_frame)
@@ -123,22 +129,34 @@ class Sidebar(QFrame):
             f"font-family:'SF Pro Display','Segoe UI',sans-serif;border:none;")
         nav_lay.addWidget(sec_lbl)
 
-        # SVG íconos
-        ico_uea    = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>'
-        ico_gest   = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>'
-        ico_teams  = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
-        ico_config = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+        # SVG íconos (Color dinámico basándose en t('ts'))
+        accent = t('ts')
+        ico_uea    = f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912.637A15.3 15.3 0 0 0 5 12a15.3 15.3 0 0 0 5.088 8.363L12 21l1.912-.637A15.3 15.3 0 0 0 19 12a15.3 15.3 0 0 0-5.088-8.363L12 3Z"/><path d="M12 3v18"/><path d="m19 12-7 .637V11.363L19 12Z"/><path d="m5 12 7 .637V11.363L5 12Z"/></svg>'
+        ico_gest   = f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.69.9H20a2 2 0 0 1 2 2v5"/><circle cx="18" cy="18" r="3"/><path d="m20.2 20.2 1.3 1.3"/></svg>'
+        ico_teams  = f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'
+        ico_config = f'<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="{accent}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>'
 
         self._nav_btns = {}
         items = [
             ("uea",    "Portal UEA",    ico_uea),
             ("panel",  "Gestión",       ico_gest),
-            ("teams",  "Teams",         ico_teams),
-            ("config", "Configuración", ico_config),
+            ("teams",  "Teams Studio",  ico_teams),
+            ("config", "Ajustes SGA",   ico_config),
         ]
+        
+        def _get_svg_icon(svg_str):
+            px = QPixmap(18, 18)
+            px.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(px)
+            renderer = QSvgRenderer(QByteArray(svg_str.encode('utf-8')))
+            renderer.render(painter)
+            painter.end()
+            return QIcon(px)
+
         for tab_id, label, svg_ico in items:
             btn = QPushButton(f"  {label}")
-            btn.setFixedHeight(32)
+            btn.setIcon(_get_svg_icon(svg_ico))
+            btn.setFixedHeight(36)
             btn.setCheckable(True)
             btn.setObjectName(f"nav_{tab_id}")
             btn.setStyleSheet(self._nav_style(False))
@@ -151,8 +169,8 @@ class Sidebar(QFrame):
     def _crear_tabs(self):
         """Crea los tabs para cambiar entre árbol y descargas."""
         self.sb_tabs = QFrame()
-        self.sb_tabs.setFixedHeight(34)
-        self.sb_tabs.setStyleSheet(f"border-bottom:1px solid {t('brd')};background:transparent;")
+        self.sb_tabs.setFixedHeight(40)
+        self.sb_tabs.setStyleSheet("background:transparent;")
         st_lay = QHBoxLayout(self.sb_tabs)
         st_lay.setContentsMargins(0, 0, 0, 0)
         st_lay.setSpacing(0)
@@ -210,40 +228,40 @@ class Sidebar(QFrame):
 
         self.tree.setStyleSheet(f"""
             QTreeWidget {{
-                background:transparent;border:none;
-                color:{t('tp')};font-size:11.5px;
-                font-family:'SF Pro Display','Segoe UI',sans-serif;
-                outline:none;
+                background: transparent;
+                border: none;
+                color: {t('tp')};
+                font-size: 12px;
+                font-family: 'SF Pro Display', 'Segoe UI', sans-serif;
+                outline: none;
+                padding-top: 5px;
             }}
-            QTreeWidget::item {{padding:5px 8px;border-radius:7px;margin:1px 4px;}}
-            QTreeWidget::item:hover {{background:{t('cardh')};}}
-            QTreeWidget::item:selected {{background:{t('accd')};color:{t('acct')};}}
-            QScrollBar:vertical{{
-                background:transparent;
-                width:6px;
-                border-radius:3px;
+            QTreeWidget::item {{
+                height: 32px;
+                padding-left: 10px;
+                border: none;
+                border-radius: 8px;
+                margin: 2px 8px;
             }}
-            QScrollBar::handle:vertical{{
-                background:rgba(255,255,255,80);
-                border-radius:3px;
-                min-height:20px;
+            QTreeWidget::item:hover {{
+                background: {t('cardh')};
+                color: {t('tp')};
             }}
-            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical{{
-                height:0px;
+            QTreeWidget::item:selected {{
+                background: {t('acc')};
+                color: white;
             }}
-            QScrollBar:horizontal{{
-                background:transparent;
-                height:6px;
-                border-radius:3px;
+            QTreeWidget::item:selected:!active {{
+                background: rgba(255,255,255,15);
+                color: {t('tp')};
             }}
-            QScrollBar::handle:horizontal{{
-                background:rgba(255,255,255,80);
-                border-radius:3px;
-                min-width:20px;
+            QScrollBar:vertical {{
+                background: transparent; width: 5px; margin: 0;
             }}
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal{{
-                width:0px;
+            QScrollBar::handle:vertical {{
+                background: rgba(255,255,255,40); border-radius: 2px; min-height: 20px;
             }}
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{ height: 0; }}
         """)
 
         self.tree.itemClicked.connect(self._on_item_clicked)
@@ -456,16 +474,16 @@ class Sidebar(QFrame):
             btn.setStyleSheet(self._nav_style(tid == tab_id))
 
     def _sbt_style(self, activo):
-        """Estilo para los tabs árbol/descargas."""
+        """Estilo para los tabs árbol/descargas (Pill Style macOS)."""
         if activo:
-            return (f"QPushButton{{background:transparent;color:{t('acct')};"
-                    f"border:none;border-bottom:2px solid {t('acc')};"
-                    f"font-size:11px;font-weight:500;"
-                    f"font-family:'SF Pro Display','Segoe UI',sans-serif;padding:0 12px;}}")
+            return (f"QPushButton{{background:{t('acc')};color:white;"
+                    f"border:none;border-radius:12px;"
+                    f"font-size:11px;font-weight:600;"
+                    f"font-family:'SF Pro Display','Segoe UI',sans-serif;padding:4px 14px; margin: 4px;}}")
         return (f"QPushButton{{background:transparent;color:{t('tm')};"
-                f"border:none;border-bottom:2px solid transparent;"
-                f"font-size:11px;font-family:'SF Pro Display','Segoe UI',sans-serif;padding:0 12px;}}"
-                f"QPushButton:hover{{color:{t('ts')};background:{t('card')};}}")
+                f"border:none;border-radius:12px;"
+                f"font-size:11px;font-family:'SF Pro Display','Segoe UI',sans-serif;padding:4px 14px; margin: 4px;}}"
+                f"QPushButton:hover{{color:{t('ts')};background:{t('cardh')};}}")
 
     def _sb_mode(self, modo):
         """Cambia entre modo árbol y modo descargas."""
@@ -695,22 +713,27 @@ class Sidebar(QFrame):
 
         for sem in sorted(semestres, key=peso):
             try:
-                sem_node = QTreeWidgetItem([f"📂  {sem}"])
                 ruta_sem = os.path.join(self.path_raiz, sem)
+                sem_node = QTreeWidgetItem([sem])
+                sem_node.setIcon(0, self.icon_provider.icon(QFileInfo(ruta_sem)))
+                
                 materias = sorted([m for m in os.listdir(ruta_sem)
                                    if os.path.isdir(os.path.join(ruta_sem, m))])
                 for mat in materias:
                     try:
-                        mat_node = QTreeWidgetItem([f"📘  {mat}"])
                         ruta_mat = os.path.join(ruta_sem, mat)
+                        mat_node = QTreeWidgetItem([mat])
+                        mat_node.setIcon(0, self.icon_provider.icon(QFileInfo(ruta_mat)))
+                        
                         archivos = sorted(
                             [f for f in os.listdir(ruta_mat) if f.endswith((".docx", ".pdf"))],
                             key=lambda x: os.path.getmtime(os.path.join(ruta_mat, x)), reverse=True
                         )
                         for arc in archivos:
                             if query in arc.lower() or query in mat.lower():
-                                icon = "📝" if arc.endswith(".docx") else "📕"
-                                mat_node.addChild(QTreeWidgetItem([f"{icon}  {arc}"]))
+                                arc_node = QTreeWidgetItem([arc])
+                                arc_node.setIcon(0, self.icon_provider.icon(QFileInfo(os.path.join(ruta_mat, arc))))
+                                mat_node.addChild(arc_node)
                         if mat_node.childCount() > 0 or query == "":
                             sem_node.addChild(mat_node)
                     except Exception:

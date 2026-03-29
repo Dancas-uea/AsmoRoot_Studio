@@ -22,7 +22,7 @@ from widgets.botonesmac_botonluzdia import AreaNotificaciones, TitleBar
 
 
 
-class AsmoRootApp(QMainWindow):
+class SGAApp(QMainWindow):
     CURRENT_THEME = THEME["dark"]
 
     def __init__(self):
@@ -35,15 +35,19 @@ class AsmoRootApp(QMainWindow):
         self.config_manager = ConfigManager(ARCHIVO_CONFIG, PATH_RAIZ)
         self.config = self.config_manager.config
 
-        self.setWindowTitle("AsmoRoot")
+        self.setWindowTitle("SGA")
         self.resize(1380, 960)
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
-        if os.path.exists(PATH_ICO):
-            self.setWindowIcon(QIcon(PATH_ICO))
-        elif os.path.exists(PATH_PNG):
-            self.setWindowIcon(QIcon(PATH_PNG))
+        # Combinar .ico y .png para compatibilidad máxima (Barra de tareas/Ventana)
+        app_icon = QIcon()
+        if os.path.exists(PATH_ICO): app_icon.addFile(PATH_ICO)
+        if os.path.exists(PATH_PNG): app_icon.addFile(PATH_PNG)
+        if not app_icon.isNull():
+            self.setWindowIcon(app_icon)
+        
+        self.setObjectName("SGAApp")
 
         self._build_ui()
         self.actualizar_arbol()
@@ -65,7 +69,8 @@ class AsmoRootApp(QMainWindow):
         root_lay.setContentsMargins(0, 0, 0, 0)
         root_lay.setSpacing(0)
 
-        self.titlebar = TitleBar(self)
+        # TitleBar con nuevo nombre
+        self.titlebar = TitleBar(self, "SGA - Sistema de Gestión Académico")
         root_lay.addWidget(self.titlebar)
 
         self.body_widget = QWidget()
@@ -109,11 +114,28 @@ class AsmoRootApp(QMainWindow):
         self._switch_main("uea")
 
     def _switch_main(self, tab_id):
+        # ── Animación suave (Fade) ──
+        from PyQt6.QtCore import QPropertyAnimation, QEasingCurve
+        from PyQt6.QtWidgets import QGraphicsOpacityEffect
+
+        # Aplicar efecto si no existe
+        if not hasattr(self, 'stack_eff'):
+            self.stack_eff = QGraphicsOpacityEffect(self.stack)
+            self.stack.setGraphicsEffect(self.stack_eff)
+
+        # Animación de salida (opcional)
+        self.stack_anim = QPropertyAnimation(self.stack_eff, b"opacity")
+        self.stack_anim.setDuration(300)
+        self.stack_anim.setStartValue(0.1)
+        self.stack_anim.setEndValue(1.0)
+        self.stack_anim.setEasingCurve(QEasingCurve.Type.InOutQuad)
+
         map_ = {"uea":    0,
                 "panel":  1,
                 "teams":  2,
                 "config": 3}
         self.stack.setCurrentIndex(map_.get(tab_id, 0))
+        self.stack_anim.start()
 
         # Notificar al sidebar qué nav está activo
         if hasattr(self, 'sidebar') and hasattr(self.sidebar, 'set_active_nav'):
@@ -127,7 +149,7 @@ class AsmoRootApp(QMainWindow):
         if tab_id in ("teams", "config"):
             self.sidebar.sb_tabs.hide()
             self.sidebar.sb_tree_frame.hide()
-            self.sidebar.sb_dl_frame.hide()
+            # self.sidebar.sb_dl_frame.hide() # Ya se maneja en _sb_mode
             self.sidebar.btn_new_sem.hide()
             self.sidebar.sb_calendar_frame.setVisible(tab_id == "teams")
         else:
@@ -142,7 +164,7 @@ class AsmoRootApp(QMainWindow):
     # ── TEMA ──────────────────────────────────
 
     def _aplicar_tema(self):
-        T = AsmoRootApp.CURRENT_THEME
+        T = SGAApp.CURRENT_THEME
         self.setStyleSheet(
             f"background:{T['bg']};font-family:'SF Pro Display','Segoe UI',sans-serif;"
             f"QComboBox{{background:{T['inp']};color:{T['tp']};border:1px solid {T['brd']};"

@@ -126,7 +126,7 @@ class Updater:
         head = QHBoxLayout()
         ic = QLabel("🚀")
         ic.setStyleSheet("font-size:32px;border:none;background:transparent;")
-        lbl_titulo = QLabel(f"AsmoRoot v{version}")
+        lbl_titulo = QLabel(f"SGA v{version}")
         lbl_titulo.setStyleSheet(f"color:{t('tp')};font-size:18px;font-weight:700;border:none;")
         head.addWidget(ic)
         head.addWidget(lbl_titulo)
@@ -238,7 +238,7 @@ class Updater:
         # SCRIPT INTELIGENTE: Espera al proceso, reemplaza, reinicia y se borra
         with open(bat_path, "w", encoding="ansi") as f:
             f.write(f"""@echo off
-title Actualizando AsmoRoot...
+title Actualizando SGA...
 echo Esperando a que el programa se cierre...
 timeout /t 2 /nobreak >nul
 

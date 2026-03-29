@@ -139,6 +139,7 @@ class Notificacion(QFrame):
                 border-radius: 12px;
             }}
         """)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
 
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(20)
@@ -194,7 +195,7 @@ class AreaNotificaciones(QWidget):
         super().__init__(parent)
         self.notifs = []
         self.setFixedWidth(310)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
 
     def agregar(self, tipo, titulo, mensaje):
         n = Notificacion(tipo, titulo, mensaje, self)

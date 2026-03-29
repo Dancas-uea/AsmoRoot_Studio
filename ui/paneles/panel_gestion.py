@@ -113,20 +113,36 @@ class PanelGestion(QScrollArea):
         col_btns.setSpacing(10)
 
         botones = [
-            ("🚀  Iniciar Nueva Tarea", t('acc'), self._iniciar_flujo),
-            ("📄  Generar PDF",         "#21618C", self._generar_pdf),
-            ("✅  Finalizar",           "#7f0000", self._reset_ui),
+            ("◎  Iniciar Nueva Tarea", t('acc'), self._iniciar_flujo),
+            ("▦  Generar PDF",         "#21618C", self._generar_pdf),
+            ("✓  Finalizar",           "#7f0000", self._reset_ui),
         ]
 
         for txt, color, func in botones:
             b = QPushButton(txt)
-            b.setFixedHeight(58)
-            b.setStyleSheet(
-                f"QPushButton{{background:{color};color:white;border:none;border-radius:12px;"
-                f"padding:0 20px;font-size:14px;font-weight:600;"
-                f"font-family:'SF Pro Display','Segoe UI',sans-serif;}}"
-                f"QPushButton:hover{{border:1px solid rgba(255,255,255,50);}}"
-                f"QPushButton:pressed{{opacity:0.8;}}")
+            b.setFixedHeight(54)
+            b.setCursor(Qt.CursorShape.PointingHandCursor)
+            # Estilo Pro macOS con sutil degradado y sombra interna
+            b.setStyleSheet(f"""
+                QPushButton {{
+                    background: {color};
+                    color: white;
+                    border-radius: 12px;
+                    padding: 0 24px;
+                    font-size: 14px;
+                    font-weight: 600;
+                    font-family: 'SF Pro Display', 'Segoe UI', sans-serif;
+                    border: 1px solid rgba(255,255,255,10);
+                }}
+                QPushButton:hover {{
+                    background: {color};
+                    border: 1px solid rgba(255,255,255,30);
+                    margin: -1px; /* sutil efecto de elevación al reducir el margen efectivo */
+                }}
+                QPushButton:pressed {{
+                    background: rgba(0,0,0,30);
+                }}
+            """)
             b.clicked.connect(func)
             col_btns.addWidget(b)
 

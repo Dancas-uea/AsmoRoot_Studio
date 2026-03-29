@@ -36,12 +36,18 @@ class PanelDescargas(QFrame):
         ttl = QLabel("⬇  Descargas")
         ttl.setStyleSheet(label_style(12, "tp", "600"))
         btn_ver = QPushButton("Ver todas")
-        btn_ver.setFixedHeight(26)
-        btn_ver.setStyleSheet(btn_style(t('accd'), t('acct'), 6, "4px 10px"))
+        btn_ver.setFixedHeight(28)
+        btn_ver.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ver.setStyleSheet(btn_style(t('accd'), t('acct'), 8, "0 12px"))
         btn_ver.clicked.connect(lambda: self.parent_app.abrir_explorador_descargas())
+        
         btn_cerrar = QPushButton("✕")
-        btn_cerrar.setFixedSize(24, 24)
-        btn_cerrar.setStyleSheet(f"background:transparent;color:{t('tm')};border:none;font-size:13px;")
+        btn_cerrar.setFixedSize(30, 30)
+        btn_cerrar.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_cerrar.setStyleSheet(
+            f"QPushButton{{background:transparent;color:{t('tm')};border:none;font-size:14px;}}"
+            f"QPushButton:hover{{background:rgba(255,255,255,15);border-radius:15px;color:{t('tp')};}}"
+        )
         btn_cerrar.clicked.connect(lambda: self.parent_app.cerrar_panel_descargas())
         hdr_lay.addWidget(ttl)
         hdr_lay.addStretch()

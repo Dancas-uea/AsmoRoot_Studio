@@ -19,6 +19,12 @@ class MiPaginaWeb(QWebEnginePage):
         if hasattr(self, '_url_anterior'):
             self.setUrl(self._url_anterior)
 
+    def javaScriptConsoleMessage(self, level, message, line, source):
+        # Silenciar errores molestos del sitio de la UEA que ensucian la consola
+        if "TypeError" in message or "null" in message or "eva.pregrado" in source:
+            return
+        super().javaScriptConsoleMessage(level, message, line, source)
+
 
 class PestañaNavegador(QWidget):
     def __init__(self, perfil, parent=None, url="https://www.google.com"):
