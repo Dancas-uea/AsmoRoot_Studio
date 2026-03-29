@@ -1,0 +1,40 @@
+FLUJO COMPLETO — De bugs a release v2.3
+1. Desarrollas y corriges ✅
+
+Identificas los 5 bugs en v2.2
+Corriges main_window.py y panel_config.py
+
+2. Pruebas local ✅
+
+Corres main.py directamente en tu PC
+Verificas que los 5 bugs están corregidos
+
+3. Subes los cambios al repo ✅
+
+git add .
+git commit -m "fix: 5 bugs v2.3"
+git push origin modular
+
+4. Generas el .exe ✅
+pyinstaller --onefile --windowed --icon=logo.ico main.py
+
+El .exe queda en la carpeta dist/
+
+5. Creas el Release en GitHub ✅
+
+Vas a Releases → Draft a new release
+Tag: v2.3
+Adjuntas AsmoRoot.exe de la carpeta dist/
+Publicas
+
+6. Actualizas version.json ← estás aquí
+
+Subes el version.json con version "2.3" a la rama modular
+Esto activa el auto-updater para todos los usuarios
+
+7. Pruebas el auto-updater
+
+Abres una versión vieja (v2.2 o v2.1)
+Esperas ~2 segundos
+Debe aparecer el popup "AsmoRoot v2.3 disponible"
+Descargas y verificas que instala correctamente

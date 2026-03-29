@@ -1,0 +1,25 @@
+# ─────────────────────────────────────────────
+#  AsmoRoot - Requirements
+#  Instalar con: pip install -r requirements.txt
+# ─────────────────────────────────────────────
+
+# Interfaz gráfica (PyQt6 completo)
+PyQt6
+PyQt6-Qt6
+PyQt6-sip
+PyQt6-WebEngine
+PyQt6-WebEngine-Qt6
+
+# Sistema y procesos
+psutil
+
+# Imágenes (PIL / Pillow)
+Pillow
+
+# Google Gemini AI
+google-genai
+
+# Windows COM (Word, Excel, etc.)
+pywin32
+
+customtkinter
