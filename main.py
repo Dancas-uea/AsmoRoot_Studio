@@ -46,25 +46,16 @@ if __name__ == "__main__":
         app.setStyle("Fusion")
         
         # Intentar cargar el icono (probamos .ico y luego .png como respaldo)
-        debug_path = os.path.join(os.path.expanduser("~"), "debug_sga.txt")
-        with open(debug_path, "w") as f:
-            f.write(f"PATH_ICO: {PATH_ICO}\n")
-            f.write(f"PATH_PNG: {PATH_PNG}\n")
-            f.write(f"ICO exists: {os.path.exists(PATH_ICO)}\n")
-            f.write(f"PNG exists: {os.path.exists(PATH_PNG)}\n")
         app_icon = QIcon()
         if os.path.exists(PATH_ICO):
             app_icon.addFile(PATH_ICO)
         if os.path.exists(PATH_PNG):
             app_icon.addFile(PATH_PNG)
             
-        with open(debug_path, "a") as f:
-            f.write(f"Icon is null: {app_icon.isNull()}\n")
         if not app_icon.isNull():
             app.setWindowIcon(app_icon)
         else:
-            with open(debug_path, "a") as f:
-                f.write(f"PELIGRO: No se pudo cargar ningún icono desde {PATH_ICO}\n")
+            print(f"PELIGRO: No se pudo cargar ningún icono desde {PATH_ICO}")
 
         app.setStyleSheet("""
             QToolTip {
@@ -82,11 +73,12 @@ if __name__ == "__main__":
         from ui.main_window import SGAApp
         window = SGAApp()
         
+        window.showMaximized()
+        
         # Forzamos el icono de nuevo en la ventana principal expresamente
         if not app_icon.isNull():
             window.setWindowIcon(app_icon)
 
-        window.showMaximized()
 
         from core.updater import Updater
         updater = Updater(window, window.version_sistema)
