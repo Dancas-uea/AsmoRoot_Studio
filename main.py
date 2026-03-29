@@ -1,5 +1,6 @@
 import sys
 import os
+import ctypes
 import json
 import traceback
 
@@ -22,6 +23,10 @@ def cargar_config():
 
 if __name__ == "__main__":
     try:
+        # Fix para que el icono se vea en la barra de tareas de Windows
+        myappid = u'asmoroot.academic.management.v2.9'
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
         QApplication.setHighDpiScaleFactorRoundingPolicy(
             Qt.HighDpiScaleFactorRoundingPolicy.PassThrough)
 

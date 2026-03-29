@@ -19,7 +19,7 @@ else:
 
 # Carpeta de iconos
 ICONS_DIR = os.path.join(_BASE_DIR, "assets", "icons")
-PATH_LOGO = os.path.join(ICONS_DIR, "logo.png")
-PATH_ICO = os.path.join(ICONS_DIR, "logo.ico")
+PATH_LOGO = os.path.join(ICONS_DIR, "sga.png")
+PATH_ICO = os.path.join(ICONS_DIR, "sga.ico")
 PATH_PNG = PATH_LOGO
 ARCHIVO_CONFIG = _ASMO_CFG_PATH

@@ -79,20 +79,14 @@ class Sidebar(QFrame):
         lay.setContentsMargins(14, 0, 14, 0)
         lay.setSpacing(10)
 
-        # Ícono cuadrado con gradiente
-        icon_lbl = QLabel("A")
+        # Ícono SGA
+        icon_lbl = QLabel()
         icon_lbl.setFixedSize(32, 32)
+        pix = QPixmap(self.path_logo).scaled(
+            32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        icon_lbl.setPixmap(pix)
         icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        icon_lbl.setStyleSheet("""
-            background: qlineargradient(x1:0,y1:0,x2:1,y2:1,
-                stop:0 #4F8EF7, stop:1 #7B5FF7);
-            border-radius: 8px;
-            color: white;
-            font-size: 15px;
-            font-weight: 700;
-            font-family: 'SF Pro Display','Segoe UI',sans-serif;
-            border: none;
-        """)
+        icon_lbl.setStyleSheet("border: none; background: transparent;")
 
         # Texto
         text_col = QVBoxLayout()
